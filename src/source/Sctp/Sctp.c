@@ -269,7 +269,8 @@ CleanUp:
     return retStatus;
 }
 
-INT32 onSctpOutboundPacket(PVOID addr, PVOID data, ULONG length, UINT8 tos, UINT8 set_df)
+//INT32 onSctpOutboundPacket(PVOID addr, PVOID data, ULONG length, UINT8 tos, UINT8 set_df)
+int onSctpOutboundPacket(void* addr, void* data, size_t length, uint8_t tos, uint8_t set_df)
 {
     UNUSED_PARAM(tos);
     UNUSED_PARAM(set_df);
