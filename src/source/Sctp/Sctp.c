@@ -327,8 +327,14 @@ CleanUp:
     return retStatus;
 }
 
-INT32 onSctpInboundPacket(struct socket* sock, union sctp_sockstore addr, PVOID data, ULONG length, struct sctp_rcvinfo rcv, INT32 flags,
-                          PVOID ulp_info)
+//INT32 onSctpInboundPacket(struct socket* sock, union sctp_sockstore addr, PVOID data, ULONG length, struct sctp_rcvinfo rcv, INT32 flags, PVOID ulp_info)
+int onSctpInboundPacket(struct socket* sock,
+                        union sctp_sockstore addr,
+                        void* data,
+                        size_t length,
+                        struct sctp_rcvinfo rcv,
+                        int flags,
+                        void* ulp_info)
 {
     UNUSED_PARAM(sock);
     UNUSED_PARAM(addr);
