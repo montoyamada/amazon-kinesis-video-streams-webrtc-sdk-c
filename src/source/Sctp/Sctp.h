@@ -80,13 +80,7 @@ STATUS sctpSessionWriteDcep(PSctpSession, UINT32, PCHAR, UINT32, PRtcDataChannel
 int onSctpOutboundPacket(void* addr, void* data, size_t length, uint8_t tos, uint8_t set_df)
 
 //INT32 onSctpInboundPacket(struct socket*, union sctp_sockstore, PVOID, ULONG, struct sctp_rcvinfo, INT32, PVOID);
-int onSctpInboundPacket(struct socket* sock,
-                        union sctp_sockstore addr,
-                        void* data,
-                        size_t length,
-                        struct sctp_rcvinfo rcv,
-                        int flags,
-                        void* ulp_info);
+int onSctpInboundPacket(struct socket* sock, union sctp_sockstore addr, void* data, size_t length, struct sctp_rcvinfo rcv, int flags, void* ulp_info);
 
 #ifdef __cplusplus
 }
