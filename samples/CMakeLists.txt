@@ -112,7 +112,7 @@ if(GST_FOUND)
   )
 endif()
 
-install(TARGETS kvsWebrtcClientMaster kvsWebrtcClientViewer discoverNatBehavior
+install(TARGETS kvsWebrtcClientMaster kvsWebrtcClientMasterw_sync kvsWebrtcClientViewer discoverNatBehavior
   RUNTIME DESTINATION bin
 )
 
