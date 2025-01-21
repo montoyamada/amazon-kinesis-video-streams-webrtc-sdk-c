@@ -70,6 +70,12 @@ add_executable(
 target_link_libraries(kvsWebrtcClientMaster kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
 
 add_executable(
+  kvsWebrtcClientMaster_w_sync
+  Common.c
+  kvsWebRTCClientMaster_w_sync.c)
+target_link_libraries(kvsWebrtcClientMaster_w_sync kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
+
+add_executable(
   kvsWebrtcClientViewer
   Common.c
   kvsWebRTCClientViewer.c)
