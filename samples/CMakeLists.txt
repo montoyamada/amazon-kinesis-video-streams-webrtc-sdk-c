@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 3.6.3)
 
 project(KinesisVideoWebRTCClientSamples LANGUAGES C)
 
-#set(OPEN_SRC_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/open-source" CACHE PATH "Libraries will be downloaded and build in this directory.")
-
+set(OPEN_SRC_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/open-source" CACHE PATH "Libraries will be downloaded and build in this directory.")
 message("OPEN_SRC_INSTALL_PREFIX=${OPEN_SRC_INSTALL_PREFIX}")
 
 if(IOT_CORE_ENABLE_CREDENTIALS)
@@ -75,6 +74,11 @@ add_executable(
   kvsWebRTCClientMaster_w_sync.c)
 target_link_libraries(kvsWebrtcClientMaster_w_sync kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
 
+# 実行ファイルの生成
+add_executable(save_to_ring_buffer save_to_ring_buffer.c)
+# Opus ライブラリをリンク
+target_link_libraries(save_to_ring_buffer PRIVATE opus)
+
 add_executable(
   kvsWebrtcClientViewer
   Common.c
@@ -112,7 +116,7 @@ if(GST_FOUND)
   )
 endif()
 
-install(TARGETS kvsWebrtcClientMaster kvsWebrtcClientMaster_w_sync kvsWebrtcClientViewer discoverNatBehavior
+install(TARGETS kvsWebrtcClientMaster kvsWebrtcClientMaster_w_sync save_to_ring_buffer kvsWebrtcClientViewer discoverNatBehavior
   RUNTIME DESTINATION bin
 )
 
