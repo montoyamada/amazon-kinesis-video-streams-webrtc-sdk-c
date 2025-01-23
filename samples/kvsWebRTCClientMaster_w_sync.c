@@ -274,7 +274,12 @@ PVOID sendAudioPackets(PVOID args)
     UINT32 i;
     STATUS status;
     //fileIndex_hereをcurrentIndex.txtから読み込む
-    fileIndex = get_current_index();
+    int fileIndex_here = get_current_index();
+    if(fileIndex_here >= 0){
+        fileIndex = fileIndex_here;
+    }else{
+        fileIndex = 0;
+    }
 
     CHK_ERR(pSampleConfiguration != NULL, STATUS_NULL_ARG, "[KVS Master] Streaming session is NULL");
     frame.presentationTs = 0;
@@ -284,7 +289,10 @@ PVOID sendAudioPackets(PVOID args)
         //100回に一回fileIndexを更新する
         //音飛びは発生するが、音声のリアルタイム性を満足させるため。
         if (fileIndex % 100 == 0) {
-            fileIndex = get_current_index();
+            int fileIndex_here = get_current_index();
+            if(fileIndex_here >= 0){
+                fileIndex = fileIndex_here;
+            }
         }
 
         if (pSampleConfiguration->audioCodec == RTC_CODEC_OPUS) {
