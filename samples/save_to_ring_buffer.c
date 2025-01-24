@@ -98,20 +98,26 @@ int main(int argc, char* argv[])
         fwrite(encodedData, 1, encodedBytes, fp);
         fclose(fp);
 
-        // -- 標準出力に現在のインデックスを表示 --
-        //   (他のアプリケーションがこの出力を見て、どのファイルに書かれたか把握できる)
-        // ファイル渡しにしたためにとりあえずコメントアウト
-        //printf("%d\n", currentIndex);
-        //fflush(stdout);
-
         //currentIndexをcurrentIndex.txtに書き込む
-        FILE* fp2 = fopen("currentIndex.txt", "w");
-        if (!fp2) {
-            fprintf(stderr, "ファイルオープン失敗: %s\n", "currentIndex.txt");
+        FILE* tmpFp = fopen("currentIndex.tmp", "w");
+        if (!tmpFp) {
+            fprintf(stderr, "ファイルオープン失敗: %s\n", "currentIndex.tmp");
             continue;
-        }   
-        fprintf(fp2, "%d\n", currentIndex);
-        fclose(fp2);
+        }
+        // 書き込み
+        fprintf(tmpFp, "%d\n", currentIndex);
+        fclose(tmpFp);
+        // 正常終了後にリネーム
+        rename("currentIndex.tmp", "currentIndex.txt");
+
+        //------
+        //FILE* fp2 = fopen("currentIndex.txt", "w");
+        //if (!fp2) {
+        //    fprintf(stderr, "ファイルオープン失敗: %s\n", "currentIndex.txt");
+        //    continue;
+        //}   
+        //fprintf(fp2, "%d\n", currentIndex);
+        //fclose(fp2);
 
         // -- NNN を更新 (サイクリックバッファ) --
         currentIndex = (currentIndex + 1) % ringSize;
