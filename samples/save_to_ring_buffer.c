@@ -8,12 +8,39 @@
  * 48kHzステレオ, 20msフレーム = 960サンプル/チャネル
  * 1サンプル = 16bit(2byte)
  * 2チャンネルなので 960*2=1920 サンプル, バイト数=3840
+ * 	•	SAMPLE_RATE (48000)
+　　　　　　1秒間に48,000サンプルを取得する設定です。
+	•	CHANNELS (2)
+　　　　　　ステレオ音声であるため、2チャネルを使用します。
+	•	FRAME_SIZE (960)
+　　　　　　20ms分のサンプル数を指します。たとえば48kHzの場合、1秒は48,000サンプルなので、1msあたり48サンプルとなり、20msでは 48 × 20 = 960 サンプルとなります。
+	•	BYTES_PER_SAMPLE (2)
+　　　　　　1サンプルは16ビット（= 2バイト）です。
+	•	PCM_FRAME_BYTES
+　　　　　　1フレームの総バイト数を計算しています。
+　　　　　　具体的には、サンプル数（FRAME_SIZE）× チャネル数（CHANNELS）× サンプルあたりバイト数（BYTES_PER_SAMPLE） という式で求めています。
  */
-#define SAMPLE_RATE   48000
-#define CHANNELS      2
-#define FRAME_SIZE    960         // 20ms worth of samples at 48 kHz
-#define BYTES_PER_SAMPLE 2        // 16bit = 2 bytes
-#define PCM_FRAME_BYTES (FRAME_SIZE * CHANNELS * BYTES_PER_SAMPLE)
+//#define SAMPLE_RATE   48000
+//#define CHANNELS      2
+//#define FRAME_SIZE    960  // 20ms worth of samples at 48/6 kHz
+//#define BYTES_PER_SAMPLE 2        // 16bit = 2 bytes
+//#define PCM_FRAME_BYTES (FRAME_SIZE * CHANNELS * BYTES_PER_SAMPLE)
+/*
+ * 8kHzステレオ, 20msフレーム 
+ なぜ FRAME_SIZE が160になるのか
+	•	8kHzの場合、1秒間に8000サンプル。
+	•	1msあたり 8000 \div 1000 = 8 サンプル。
+	•	20ms分のサンプル数は 8 \times 20 = 160。
+	•	よって1フレーム（20ms）あたりのサンプル数（片チャネル）は160になる。
+フレームあたりの総バイト数
+	•	ステレオ(2チャネル)なので 160サンプル/チャネル × 2チャネル = 320サンプル/フレーム。
+	•	1サンプルあたり2バイトなので、1フレームあたりの合計バイト数は 320 × 2 = 640 バイト。
+ */
+#define SAMPLE_RATE       8000               // サンプリング周波数を8kHzに変更
+#define CHANNELS          2                  // ステレオ(2チャネル)はそのまま
+#define FRAME_SIZE        160                // 20ms分のサンプル数を計算しなおす
+#define BYTES_PER_SAMPLE  2                  // 16ビット(2バイト)はそのまま
+#define PCM_FRAME_BYTES   (FRAME_SIZE * CHANNELS * BYTES_PER_SAMPLE)
 
 // エンコード出力の最大サイズ(十分な余裕を持たせる)
 #define MAX_OPUS_PACKET_SIZE 4000
