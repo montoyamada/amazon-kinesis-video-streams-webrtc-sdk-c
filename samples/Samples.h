@@ -176,6 +176,10 @@ typedef struct {
     UINT32 logLevel;
     BOOL enableTwcc;
     BOOL enableIceStats;
+
+    // 音声スレッドを再起動する必要があるかどうか
+    volatile SIZE_T needToRestartAudioThread;
+    
 } SampleConfiguration, *PSampleConfiguration;
 
 typedef struct {
