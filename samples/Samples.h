@@ -178,7 +178,7 @@ typedef struct {
     BOOL enableIceStats;
 
     // 音声スレッドを再起動する必要があるかどうか
-    volatile SIZE_T needToRestartAudioThread;
+    //volatile SIZE_T needToRestartAudioThread;
     
 } SampleConfiguration, *PSampleConfiguration;
 
