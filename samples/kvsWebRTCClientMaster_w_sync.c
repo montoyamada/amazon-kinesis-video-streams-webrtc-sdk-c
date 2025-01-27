@@ -275,6 +275,7 @@ PVOID sendAudioPackets(PVOID args)
     STATUS status;
     //fileIndex_hereをcurrentIndex.txtから読み込む
     int fileIndex_here = get_current_index();
+    int fileIndex_here_last = fileIndex_here;
     if(fileIndex_here >= 0){
         fileIndex = fileIndex_here;
     }else{
@@ -290,71 +291,11 @@ PVOID sendAudioPackets(PVOID args)
         //音飛びは発生するが、音声のリアルタイム性を満足させるため。
         if (fileIndex % 100 == 0) {
             int fileIndex_here = get_current_index();
-            if(fileIndex_here >= 0){
+            if(fileIndex_here >= 0 && fileIndex_here != fileIndex_here_last){
                 fileIndex = fileIndex_here;
+                fileIndex_here_last = fileIndex_here;
             }
         }
-
-        if (pSampleConfiguration->audioCodec == RTC_CODEC_OPUS) {
-            SNPRINTF(filePath, MAX_PATH_LEN, "./opusSampleFrames/sample-%03d.opus", fileIndex);
-        }
-
-        CHK_STATUS(readFrameFromDisk(NULL, &frameSize, filePath));
-
-        // Re-alloc if needed
-        if (frameSize > pSampleConfiguration->audioBufferSize) {
-            pSampleConfiguration->pAudioFrameBuffer = (UINT8*) MEMREALLOC(pSampleConfiguration->pAudioFrameBuffer, frameSize);
-            CHK_ERR(pSampleConfiguration->pAudioFrameBuffer != NULL, STATUS_NOT_ENOUGH_MEMORY, "[KVS Master] Failed to allocate audio frame buffer");
-            pSampleConfiguration->audioBufferSize = frameSize;
-        }
-
-        frame.frameData = pSampleConfiguration->pAudioFrameBuffer;
-        frame.size = frameSize;
-
-        CHK_STATUS(readFrameFromDisk(frame.frameData, &frameSize, filePath));
-
-        frame.presentationTs += SAMPLE_AUDIO_FRAME_DURATION;
-
-        MUTEX_LOCK(pSampleConfiguration->streamingSessionListReadLock);
-        for (i = 0; i < pSampleConfiguration->streamingSessionCount; ++i) {
-            status = writeFrame(pSampleConfiguration->sampleStreamingSessionList[i]->pAudioRtcRtpTransceiver, &frame);
-            if (status != STATUS_SRTP_NOT_READY_YET) {
-                if (status != STATUS_SUCCESS) {
-                    DLOGV("writeFrame() failed with 0x%08x", status);
-                } else if (pSampleConfiguration->sampleStreamingSessionList[i]->firstFrame && status == STATUS_SUCCESS) {
-                    PROFILE_WITH_START_TIME(pSampleConfiguration->sampleStreamingSessionList[i]->offerReceiveTime, "Time to first frame");
-                    pSampleConfiguration->sampleStreamingSessionList[i]->firstFrame = FALSE;
-                }
-            } else {
-                // Reset file index to stay in sync with video frames.
-                fileIndex = 0;
-            }
-        }
-        MUTEX_UNLOCK(pSampleConfiguration->streamingSessionListReadLock);
-        THREAD_SLEEP(SAMPLE_AUDIO_FRAME_DURATION);
-    }
-
-CleanUp:
-    DLOGI("[KVS Master] closing audio thread");
-    return (PVOID) (ULONG_PTR) retStatus;
-}
-
-
-PVOID void_sendAudioPackets(PVOID args)
-{
-    STATUS retStatus = STATUS_SUCCESS;
-    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration) args;
-    Frame frame;
-    UINT32 fileIndex = 0, frameSize;
-    CHAR filePath[MAX_PATH_LEN + 1];
-    UINT32 i;
-    STATUS status;
-
-    CHK_ERR(pSampleConfiguration != NULL, STATUS_NULL_ARG, "[KVS Master] Streaming session is NULL");
-    frame.presentationTs = 0;
-
-    while (!ATOMIC_LOAD_BOOL(&pSampleConfiguration->appTerminateFlag)) {
-        fileIndex = fileIndex % NUMBER_OF_OPUS_FRAME_FILES + 1;
 
         if (pSampleConfiguration->audioCodec == RTC_CODEC_OPUS) {
             SNPRINTF(filePath, MAX_PATH_LEN, "./opusSampleFrames/sample-%03d.opus", fileIndex);
