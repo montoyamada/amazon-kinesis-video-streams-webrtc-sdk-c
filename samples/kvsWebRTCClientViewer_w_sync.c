@@ -1,6 +1,16 @@
 #include "Samples.h"
 
 extern PSampleConfiguration gSampleConfiguration;
+// サイクリックバッファの最大数（リングバッファのサイズ）
+// - 必要に応じて可変にしたい場合は、プログラム起動時の引数や環境変数などで設定する
+#define RING_SIZE 100
+
+// ゼロパディングの桁数 (例: 3桁 => 001, 002, ..., 999)
+#define ZERO_PADDING 3
+
+static int gRingSize = RING_SIZE;
+// 現在の書き込みインデックス
+static int gCurrentIndex = 0;
 
 #ifdef ENABLE_DATA_CHANNEL
 
