@@ -92,7 +92,7 @@ STATUS signalingClientStateChanged(UINT64 customData, SIGNALING_CLIENT_STATE sta
 
 STATUS signalingClientError(UINT64 customData, STATUS status, PCHAR msg, UINT32 msgLen)
 {
-    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration) customData;
+    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration)(uintptr_t) customData;
 
     DLOGW("Signaling client generated an error 0x%08x - '%.*s'", status, msgLen, msg);
 
@@ -136,7 +136,7 @@ CleanUp:
 
 STATUS handleAnswer(PSampleConfiguration pSampleConfiguration, PSampleStreamingSession pSampleStreamingSession, PSignalingMessage pSignalingMessage)
 {
-    UNUSED_PARAM(pSampleConfiguration);
+    UNUSED_PARAM(PSampleConfiguration)(uintptr_t);
     STATUS retStatus = STATUS_SUCCESS;
     RtcSessionDescriptionInit answerSessionDescriptionInit;
 
@@ -160,7 +160,7 @@ CleanUp:
 PVOID mediaSenderRoutine(PVOID customData)
 {
     STATUS retStatus = STATUS_SUCCESS;
-    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration) customData;
+    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration)(uintptr_t) customData;
     CHK(pSampleConfiguration != NULL, STATUS_NULL_ARG);
     pSampleConfiguration->videoSenderTid = INVALID_TID_VALUE;
     pSampleConfiguration->audioSenderTid = INVALID_TID_VALUE;
@@ -856,7 +856,7 @@ STATUS createSampleConfiguration(PCHAR channelName, SIGNALING_CHANNEL_ROLE_TYPE 
 
     CHK(ppSampleConfiguration != NULL, STATUS_NULL_ARG);
 
-    CHK(NULL != (pSampleConfiguration = (PSampleConfiguration) MEMCALLOC(1, SIZEOF(SampleConfiguration))), STATUS_NOT_ENOUGH_MEMORY);
+    CHK(NULL != (pSampleConfiguration = (PSampleConfiguration)(uintptr_t) MEMCALLOC(1, SIZEOF(SampleConfiguration))), STATUS_NOT_ENOUGH_MEMORY);
 
 #ifdef IOT_CORE_ENABLE_CREDENTIALS
     PCHAR pIotCoreCredentialEndPoint, pIotCoreCert, pIotCorePrivateKey, pIotCoreRoleAlias, pIotCoreCertificateId, pIotCoreThingName;
@@ -1069,7 +1069,7 @@ STATUS getIceCandidatePairStatsCallback(UINT32 timerId, UINT64 currentTime, UINT
     UNUSED_PARAM(timerId);
     UNUSED_PARAM(currentTime);
     STATUS retStatus = STATUS_SUCCESS;
-    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration) customData;
+    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration)(uintptr_t) customData;
     UINT32 i;
     UINT64 currentMeasureDuration = 0;
     DOUBLE averagePacketsDiscardedOnSend = 0.0;
@@ -1172,7 +1172,7 @@ STATUS pregenerateCertTimerCallback(UINT32 timerId, UINT64 currentTime, UINT64 c
     UNUSED_PARAM(timerId);
     UNUSED_PARAM(currentTime);
     STATUS retStatus = STATUS_SUCCESS;
-    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration) customData;
+    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration)(uintptr_t) customData;
     BOOL locked = FALSE;
     UINT32 certCount;
     PRtcCertificate pRtcCertificate = NULL;
@@ -1479,7 +1479,7 @@ CleanUp:
 STATUS signalingMessageReceived(UINT64 customData, PReceivedSignalingMessage pReceivedSignalingMessage)
 {
     STATUS retStatus = STATUS_SUCCESS;
-    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration) customData;
+    PSampleConfiguration pSampleConfiguration = (PSampleConfiguration)(uintptr_t) customData;
     BOOL peerConnectionFound = FALSE, locked = FALSE, startStats = FALSE, freeStreamingSession = FALSE;
     UINT32 clientIdHash;
     UINT64 hashValue = 0;
