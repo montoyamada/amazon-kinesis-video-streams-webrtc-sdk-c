@@ -653,6 +653,12 @@ VOID sampleAudioFrameHandler(UINT64 customData, PFrame pFrame)
     DLOGV("Audio Frame received. TrackId: %" PRIu64 ", Size: %u, Flags %u", pFrame->trackId, pFrame->size, pFrame->flags);
 }
 
+VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
+{
+    UNUSED_PARAM(customData);
+    DLOGV("Audio Frame received. >>>>>> TrackId: %" PRIu64 ", Size: %u, Flags %u", pFrame->trackId, pFrame->size, pFrame->flags);
+}
+
 VOID sampleFrameHandler(UINT64 customData, PFrame pFrame)
 {
     UNUSED_PARAM(customData);
