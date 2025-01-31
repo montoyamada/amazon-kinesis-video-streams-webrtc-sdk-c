@@ -510,12 +510,12 @@ STATUS createSampleStreamingSession(PSampleConfiguration pSampleConfiguration, P
     pSampleConfiguration->enableIceStats = FALSE;
 
     CHK_STATUS(initializePeerConnection(pSampleConfiguration, &pSampleStreamingSession->pPeerConnection));
-    CHK_STATUS(peerConnectionOnIceCandidate(pSampleStreamingSession->pPeerConnection, (UINT64) pSampleStreamingSession, onIceCandidateHandler));
+    CHK_STATUS(peerConnectionOnIceCandidate(pSampleStreamingSession->pPeerConnection, (UINT64)(uintptr_t) pSampleStreamingSession, onIceCandidateHandler));
     CHK_STATUS(
-        peerConnectionOnConnectionStateChange(pSampleStreamingSession->pPeerConnection, (UINT64) pSampleStreamingSession, onConnectionStateChange));
+        peerConnectionOnConnectionStateChange(pSampleStreamingSession->pPeerConnection, (UINT64)(uintptr_t) pSampleStreamingSession, onConnectionStateChange));
 #ifdef ENABLE_DATA_CHANNEL
     if (pSampleConfiguration->onDataChannel != NULL) {
-        CHK_STATUS(peerConnectionOnDataChannel(pSampleStreamingSession->pPeerConnection, (UINT64) pSampleStreamingSession,
+        CHK_STATUS(peerConnectionOnDataChannel(pSampleStreamingSession->pPeerConnection, (UINT64)(uintptr_t) pSampleStreamingSession,
                                                pSampleConfiguration->onDataChannel));
     }
 #endif
@@ -536,7 +536,7 @@ STATUS createSampleStreamingSession(PSampleConfiguration pSampleConfiguration, P
                                                  pSampleConfiguration->videoRollingBufferDurationSec,
                                                  pSampleConfiguration->videoRollingBufferBitratebps));
 
-    CHK_STATUS(transceiverOnBandwidthEstimation(pSampleStreamingSession->pVideoRtcRtpTransceiver, (UINT64) pSampleStreamingSession,
+    CHK_STATUS(transceiverOnBandwidthEstimation(pSampleStreamingSession->pVideoRtcRtpTransceiver, (UINT64)(uintptr_t) pSampleStreamingSession,
                                                 sampleBandwidthEstimationHandler));
 
     // Add a SendRecv Transceiver of type audio
@@ -552,11 +552,11 @@ STATUS createSampleStreamingSession(PSampleConfiguration pSampleConfiguration, P
                                                  pSampleConfiguration->audioRollingBufferDurationSec,
                                                  pSampleConfiguration->audioRollingBufferBitratebps));
 
-    CHK_STATUS(transceiverOnBandwidthEstimation(pSampleStreamingSession->pAudioRtcRtpTransceiver, (UINT64) pSampleStreamingSession,
+    CHK_STATUS(transceiverOnBandwidthEstimation(pSampleStreamingSession->pAudioRtcRtpTransceiver, (UINT64)(uintptr_t) pSampleStreamingSession,
                                                 sampleBandwidthEstimationHandler));
     // twcc bandwidth estimation
     if (pSampleConfiguration->enableTwcc) {
-        CHK_STATUS(peerConnectionOnSenderBandwidthEstimation(pSampleStreamingSession->pPeerConnection, (UINT64) pSampleStreamingSession,
+        CHK_STATUS(peerConnectionOnSenderBandwidthEstimation(pSampleStreamingSession->pPeerConnection, (UINT64)(uintptr_t) pSampleStreamingSession,
                                                              sampleSenderBandwidthEstimationHandler));
     }
     pSampleStreamingSession->startUpLatency = 0;
@@ -604,7 +604,7 @@ STATUS freeSampleStreamingSession(PSampleStreamingSession* ppSampleStreamingSess
     if (pSampleConfiguration->iceCandidatePairStatsTimerId != MAX_UINT32 && pSampleConfiguration->streamingSessionCount == 0 &&
         IS_VALID_TIMER_QUEUE_HANDLE(pSampleConfiguration->timerQueueHandle)) {
         CHK_LOG_ERR(timerQueueCancelTimer(pSampleConfiguration->timerQueueHandle, pSampleConfiguration->iceCandidatePairStatsTimerId,
-                                          (UINT64) pSampleConfiguration));
+                                          (UINT64)(uintptr_t) pSampleConfiguration));
         pSampleConfiguration->iceCandidatePairStatsTimerId = MAX_UINT32;
     }
     MUTEX_UNLOCK(pSampleConfiguration->sampleConfigurationObjLock);
@@ -753,14 +753,14 @@ VOID sampleSenderBandwidthEstimationHandler(UINT64 customData, UINT32 txBytes, U
 
     if (pSampleStreamingSession->twccMetadata.averagePacketLoss <= 5) {
         // increase encoder bitrate by 5 percent with a cap at MAX_BITRATE
-        videoBitrate = (UINT64) MIN(videoBitrate * 1.05, MAX_VIDEO_BITRATE_KBPS);
+        videoBitrate = (UINT64)(uintptr_t) MIN(videoBitrate * 1.05, MAX_VIDEO_BITRATE_KBPS);
         // increase encoder bitrate by 5 percent with a cap at MAX_BITRATE
-        audioBitrate = (UINT64) MIN(audioBitrate * 1.05, MAX_AUDIO_BITRATE_BPS);
+        audioBitrate = (UINT64)(uintptr_t) MIN(audioBitrate * 1.05, MAX_AUDIO_BITRATE_BPS);
     } else {
         // decrease encoder bitrate by average packet loss percent, with a cap at MIN_BITRATE
-        videoBitrate = (UINT64) MAX(videoBitrate * (1.0 - pSampleStreamingSession->twccMetadata.averagePacketLoss / 100.0), MIN_VIDEO_BITRATE_KBPS);
+        videoBitrate = (UINT64)(uintptr_t) MAX(videoBitrate * (1.0 - pSampleStreamingSession->twccMetadata.averagePacketLoss / 100.0), MIN_VIDEO_BITRATE_KBPS);
         // decrease encoder bitrate by average packet loss percent, with a cap at MIN_BITRATE
-        audioBitrate = (UINT64) MAX(audioBitrate * (1.0 - pSampleStreamingSession->twccMetadata.averagePacketLoss / 100.0), MIN_AUDIO_BITRATE_BPS);
+        audioBitrate = (UINT64)(uintptr_t) MAX(audioBitrate * (1.0 - pSampleStreamingSession->twccMetadata.averagePacketLoss / 100.0), MIN_AUDIO_BITRATE_BPS);
     }
 
     // Update the session with the new bitrate and adjustment time
@@ -827,7 +827,7 @@ STATUS lookForSslCert(PSampleConfiguration* ppSampleConfiguration)
         CHK(0 == FSTAT(pSampleConfiguration->pCaCertPath, &pathStat), STATUS_DIRECTORY_ENTRY_STAT_ERROR);
 
         if (S_ISDIR(pathStat.st_mode)) {
-            CHK_STATUS(traverseDirectory(pSampleConfiguration->pCaCertPath, (UINT64) &certName, /* iterate */ FALSE, traverseDirectoryPEMFileScan));
+            CHK_STATUS(traverseDirectory(pSampleConfiguration->pCaCertPath, (UINT64)(uintptr_t) &certName, /* iterate */ FALSE, traverseDirectoryPEMFileScan));
 
             if (certName[0] != 0x0) {
                 STRCAT(pSampleConfiguration->pCaCertPath, certName);
@@ -951,7 +951,7 @@ STATUS createSampleConfiguration(PCHAR channelName, SIGNALING_CHANNEL_ROLE_TYPE 
     pSampleConfiguration->signalingClientCallbacks.version = SIGNALING_CLIENT_CALLBACKS_CURRENT_VERSION;
     pSampleConfiguration->signalingClientCallbacks.errorReportFn = signalingClientError;
     pSampleConfiguration->signalingClientCallbacks.stateChangeFn = signalingClientStateChanged;
-    pSampleConfiguration->signalingClientCallbacks.customData = (UINT64) pSampleConfiguration;
+    pSampleConfiguration->signalingClientCallbacks.customData = (UINT64)(uintptr_t) pSampleConfiguration;
 
     pSampleConfiguration->clientInfo.version = SIGNALING_CLIENT_INFO_CURRENT_VERSION;
     pSampleConfiguration->clientInfo.loggingLevel = logLevel;
@@ -978,7 +978,7 @@ STATUS createSampleConfiguration(PCHAR channelName, SIGNALING_CHANNEL_ROLE_TYPE 
     if (SAMPLE_PRE_GENERATE_CERT) {
         CHK_LOG_ERR(retStatus =
                         timerQueueAddTimer(pSampleConfiguration->timerQueueHandle, 0, SAMPLE_PRE_GENERATE_CERT_PERIOD, pregenerateCertTimerCallback,
-                                           (UINT64) pSampleConfiguration, &pSampleConfiguration->pregenerateCertTimerId));
+                                           (UINT64)(uintptr_t) pSampleConfiguration, &pSampleConfiguration->pregenerateCertTimerId));
     }
 
     pSampleConfiguration->iceUriCount = 0;
@@ -1194,7 +1194,7 @@ STATUS pregenerateCertTimerCallback(UINT32 timerId, UINT64 currentTime, UINT64 c
     CHK_STATUS(createRtcCertificate(&pRtcCertificate));
 
     // Add to the stack queue
-    CHK_STATUS(stackQueueEnqueue(pSampleConfiguration->pregeneratedCertificates, (UINT64) pRtcCertificate));
+    CHK_STATUS(stackQueueEnqueue(pSampleConfiguration->pregeneratedCertificates, (UINT64)(uintptr_t) pRtcCertificate));
 
     DLOGV("New certificate has been pre-generated and added to the queue");
 
@@ -1235,7 +1235,7 @@ STATUS freeSampleConfiguration(PSampleConfiguration* ppSampleConfiguration)
     if (IS_VALID_TIMER_QUEUE_HANDLE(pSampleConfiguration->timerQueueHandle)) {
         if (pSampleConfiguration->iceCandidatePairStatsTimerId != MAX_UINT32) {
             retStatus = timerQueueCancelTimer(pSampleConfiguration->timerQueueHandle, pSampleConfiguration->iceCandidatePairStatsTimerId,
-                                              (UINT64) pSampleConfiguration);
+                                              (UINT64)(uintptr_t) pSampleConfiguration);
             if (STATUS_FAILED(retStatus)) {
                 DLOGE("Failed to cancel stats timer with: 0x%08x", retStatus);
             }
@@ -1244,7 +1244,7 @@ STATUS freeSampleConfiguration(PSampleConfiguration* ppSampleConfiguration)
 
         if (pSampleConfiguration->pregenerateCertTimerId != MAX_UINT32) {
             retStatus = timerQueueCancelTimer(pSampleConfiguration->timerQueueHandle, pSampleConfiguration->pregenerateCertTimerId,
-                                              (UINT64) pSampleConfiguration);
+                                              (UINT64)(uintptr_t) pSampleConfiguration);
             if (STATUS_FAILED(retStatus)) {
                 DLOGE("Failed to cancel certificate pre-generation timer with: 0x%08x", retStatus);
             }
@@ -1528,7 +1528,7 @@ STATUS signalingMessageReceived(UINT64 customData, PReceivedSignalingMessage pRe
                                                     &pSampleStreamingSession));
             freeStreamingSession = TRUE;
             CHK_STATUS(handleOffer(pSampleConfiguration, pSampleStreamingSession, &pReceivedSignalingMessage->signalingMessage));
-            CHK_STATUS(hashTablePut(pSampleConfiguration->pRtcPeerConnectionForRemoteClient, clientIdHash, (UINT64) pSampleStreamingSession));
+            CHK_STATUS(hashTablePut(pSampleConfiguration->pRtcPeerConnectionForRemoteClient, clientIdHash, (UINT64)(uintptr_t) pSampleStreamingSession));
 
             // If there are any ice candidate messages in the queue for this client id, submit them now.
             CHK_STATUS(getPendingMessageQueueForHash(pSampleConfiguration->pPendingSignalingMessageForRemoteClient, clientIdHash, TRUE,
@@ -1557,7 +1557,7 @@ STATUS signalingMessageReceived(UINT64 customData, PReceivedSignalingMessage pRe
              */
             pSampleStreamingSession = pSampleConfiguration->sampleStreamingSessionList[0];
             CHK_STATUS(handleAnswer(pSampleConfiguration, pSampleStreamingSession, &pReceivedSignalingMessage->signalingMessage));
-            CHK_STATUS(hashTablePut(pSampleConfiguration->pRtcPeerConnectionForRemoteClient, clientIdHash, (UINT64) pSampleStreamingSession));
+            CHK_STATUS(hashTablePut(pSampleConfiguration->pRtcPeerConnectionForRemoteClient, clientIdHash, (UINT64)(uintptr_t) pSampleStreamingSession));
 
             // If there are any ice candidate messages in the queue for this client id, submit them now.
             CHK_STATUS(getPendingMessageQueueForHash(pSampleConfiguration->pPendingSignalingMessageForRemoteClient, clientIdHash, TRUE,
@@ -1585,14 +1585,14 @@ STATUS signalingMessageReceived(UINT64 customData, PReceivedSignalingMessage pRe
                                                          &pPendingMessageQueue));
                 if (pPendingMessageQueue == NULL) {
                     CHK_STATUS(createMessageQueue(clientIdHash, &pPendingMessageQueue));
-                    CHK_STATUS(stackQueueEnqueue(pSampleConfiguration->pPendingSignalingMessageForRemoteClient, (UINT64) pPendingMessageQueue));
+                    CHK_STATUS(stackQueueEnqueue(pSampleConfiguration->pPendingSignalingMessageForRemoteClient, (UINT64)(uintptr_t) pPendingMessageQueue));
                 }
 
                 pReceivedSignalingMessageCopy = (PReceivedSignalingMessage) MEMCALLOC(1, SIZEOF(ReceivedSignalingMessage));
 
                 *pReceivedSignalingMessageCopy = *pReceivedSignalingMessage;
 
-                CHK_STATUS(stackQueueEnqueue(pPendingMessageQueue->messageQueue, (UINT64) pReceivedSignalingMessageCopy));
+                CHK_STATUS(stackQueueEnqueue(pPendingMessageQueue->messageQueue, (UINT64)(uintptr_t) pReceivedSignalingMessageCopy));
 
                 // NULL the pointers to not free any longer
                 pPendingMessageQueue = NULL;
@@ -1612,7 +1612,7 @@ STATUS signalingMessageReceived(UINT64 customData, PReceivedSignalingMessage pRe
 
     if (pSampleConfiguration->enableIceStats && startStats &&
         STATUS_FAILED(retStatus = timerQueueAddTimer(pSampleConfiguration->timerQueueHandle, SAMPLE_STATS_DURATION, SAMPLE_STATS_DURATION,
-                                                     getIceCandidatePairStatsCallback, (UINT64) pSampleConfiguration,
+                                                     getIceCandidatePairStatsCallback, (UINT64)(uintptr_t) pSampleConfiguration,
                                                      &pSampleConfiguration->iceCandidatePairStatsTimerId))) {
         DLOGW("Failed to add getIceCandidatePairStatsCallback to add to timer queue (code 0x%08x). "
               "Cannot pull ice candidate pair metrics periodically",

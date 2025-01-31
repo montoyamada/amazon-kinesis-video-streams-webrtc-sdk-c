@@ -5,6 +5,9 @@ project(KinesisVideoWebRTCClientSamples LANGUAGES C)
 set(OPEN_SRC_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/open-source" CACHE PATH "Libraries will be downloaded and build in this directory.")
 message("OPEN_SRC_INSTALL_PREFIX=${OPEN_SRC_INSTALL_PREFIX}")
 
+#警告を無視し、かつ -Werror 等を無効化
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast")
+
 if(IOT_CORE_ENABLE_CREDENTIALS)
   add_definitions(-DIOT_CORE_ENABLE_CREDENTIALS)
   message("Use IoT credentials in the samples")
