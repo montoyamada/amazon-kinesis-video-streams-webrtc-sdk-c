@@ -2,6 +2,13 @@
 
 extern PSampleConfiguration gSampleConfiguration;
 
+VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
+{
+    UNUSED_PARAM(customData);
+    DLOGV("Audio Frame received. 222>>>>>> TrackId: %" PRIu64 ", Size: %u, Flags %u", pFrame->trackId, pFrame->size, pFrame->flags);
+}
+
+
 #ifdef ENABLE_DATA_CHANNEL
 
 // onMessage callback for a message received by the viewer on a data channel
