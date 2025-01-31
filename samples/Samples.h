@@ -268,6 +268,7 @@ STATUS respondWithAnswer(PSampleStreamingSession);
 STATUS resetSampleConfigurationState(PSampleConfiguration);
 VOID sampleVideoFrameHandler(UINT64, PFrame);
 VOID sampleAudioFrameHandler(UINT64, PFrame);
+VOID sampleAudioFrameHandler2(UINT64, PFrame);
 VOID sampleFrameHandler(UINT64, PFrame);
 VOID sampleBandwidthEstimationHandler(UINT64, DOUBLE);
 VOID sampleSenderBandwidthEstimationHandler(UINT64, UINT32, UINT32, UINT32, UINT32, UINT64);
