@@ -2,7 +2,10 @@
 
 extern PSampleConfiguration gSampleConfiguration;
 // (例) Common.c の先頭にグローバル変数/マクロを追加
+// サイクリックバッファの最大数（リングバッファのサイズ）
 
+// - 必要に応じて可変にしたい場合は、プログラム起動時の引数や環境変数などで設定する
+#define RING_SIZE 100
 // 連番ファイル名のゼロパディング桁数
 #define ZERO_PADDING 3
 
@@ -12,16 +15,9 @@ static int gRingSize = 100;
 // 現在のファイルインデックス
 static int gCurrentIndex = 0;
 
-// サイクリックバッファの最大数（リングバッファのサイズ）
-// - 必要に応じて可変にしたい場合は、プログラム起動時の引数や環境変数などで設定する
-#define RING_SIZE 100
 
-// ゼロパディングの桁数 (例: 3桁 => 001, 002, ..., 999)
-#define ZERO_PADDING 3
 
-static int gRingSize = RING_SIZE;
-// 現在の書き込みインデックス
-static int gCurrentIndex = 0;
+
 //-------------
 VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
 {
