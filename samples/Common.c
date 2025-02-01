@@ -1,5 +1,15 @@
 #define LOG_CLASS "WebRtcSamples"
 #include "Samples.h"
+// (例) Common.c の先頭にグローバル変数/マクロを追加
+
+// 連番ファイル名のゼロパディング桁数
+#define ZERO_PADDING 3
+
+// サイクリックバッファの最大数
+static int gRingSize = 100;  
+
+// 現在のファイルインデックス
+static int gCurrentIndex = 0;
 
 PSampleConfiguration gSampleConfiguration = NULL;
 
