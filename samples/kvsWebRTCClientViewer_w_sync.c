@@ -1,6 +1,17 @@
 #include "Samples.h"
 
 extern PSampleConfiguration gSampleConfiguration;
+// (例) Common.c の先頭にグローバル変数/マクロを追加
+
+// 連番ファイル名のゼロパディング桁数
+#define ZERO_PADDING 3
+
+// サイクリックバッファの最大数
+static int gRingSize = 100;  
+
+// 現在のファイルインデックス
+static int gCurrentIndex = 0;
+
 // サイクリックバッファの最大数（リングバッファのサイズ）
 // - 必要に応じて可変にしたい場合は、プログラム起動時の引数や環境変数などで設定する
 #define RING_SIZE 100
@@ -11,6 +22,56 @@ extern PSampleConfiguration gSampleConfiguration;
 static int gRingSize = RING_SIZE;
 // 現在の書き込みインデックス
 static int gCurrentIndex = 0;
+//-------------
+VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
+{
+    UNUSED_PARAM(customData);
+
+    // 受信したフレームがすでに「Opus」なのか「PCM」なのかを把握しておく必要があります。
+    // ここでは「Opusフレームが飛んでくる」という想定で、そのままファイルに書き込みます。
+    // もし生PCMなら、libopus等でエンコードしてから書き込んでください。
+
+    // ファイル名を組み立て
+    // 例: "opusSampleFrames/sample-003.opus"
+    char filePath[256];
+    snprintf(filePath, sizeof(filePath),
+             "opusSampleFramesR/sample-%0*d.opus",
+             ZERO_PADDING, gCurrentIndex);
+
+    // ファイル書き込み
+    FILE* fp = fopen(filePath, "wb");
+    if (fp == NULL) {
+        fprintf(stderr, "Failed to open file: %s\n", filePath);
+        return;
+    }
+
+    fwrite(pFrame->frameData, 1, pFrame->size, fp);
+    fclose(fp);
+
+    // ログ出力 (デバッグ用)
+    // PRIu64 を使って 64bit の trackId を安全に表示
+    printf("Saved frame to %s (Size = %u bytes, TrackId = %" PRIu64 ")\n",
+           filePath, pFrame->size, pFrame->trackId);
+
+    // currentIndex.txt に現在のインデックスを書き込む (原則オプション。必要な場合のみ)
+    {
+        // 一時ファイルに書いてから rename でアトミックに置き換える方法
+        FILE* tmpFp = fopen("currentIndex.tmp", "w");
+        if (tmpFp) {
+            fprintf(tmpFp, "%d\n", gCurrentIndex);
+            fclose(tmpFp);
+            rename("currentIndex.tmp", "currentIndexR.txt");
+        }
+    }
+
+    // -- サイクリックインデックスを更新 --
+    // RING_SIZE=100 なら 0~99 をループ
+    gCurrentIndex = (gCurrentIndex + 1) % gRingSize;
+}
+
+
+
+//---------------
 
 #ifdef ENABLE_DATA_CHANNEL
 
