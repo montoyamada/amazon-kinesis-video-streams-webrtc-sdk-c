@@ -5,7 +5,7 @@ extern PSampleConfiguration gSampleConfiguration;
 // サイクリックバッファの最大数（リングバッファのサイズ）
 
 // - 必要に応じて可変にしたい場合は、プログラム起動時の引数や環境変数などで設定する
-#define RING_SIZE 100
+//#define RING_SIZE 100
 // 連番ファイル名のゼロパディング桁数
 #define ZERO_PADDING 3
 
@@ -52,11 +52,11 @@ VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
     // currentIndex.txt に現在のインデックスを書き込む (原則オプション。必要な場合のみ)
     {
         // 一時ファイルに書いてから rename でアトミックに置き換える方法
-        FILE* tmpFp = fopen("currentIndex.tmp", "w");
+        FILE* tmpFp = fopen("currentIndexR.tmp", "w");
         if (tmpFp) {
             fprintf(tmpFp, "%d\n", gCurrentIndex);
             fclose(tmpFp);
-            rename("currentIndex.tmp", "currentIndexR.txt");
+            rename("currentIndexR.tmp", "currentIndexR.txt");
         }
     }
 
