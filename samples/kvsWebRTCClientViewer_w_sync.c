@@ -31,7 +31,7 @@ VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
     // 例: "opusSampleFrames/sample-003.opus"
     char filePath[256];
     snprintf(filePath, sizeof(filePath),
-             "opusSampleFramesR/sample-%0*d.opus",
+             "opusSampleFrames/sample-%0*d.opus",
              ZERO_PADDING, gCurrentIndex);
 
     // ファイル書き込み
@@ -52,7 +52,7 @@ VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
     // currentIndex.txt に現在のインデックスを書き込む (原則オプション。必要な場合のみ)
     {
         // 一時ファイルに書いてから rename でアトミックに置き換える方法
-        FILE* tmpFp = fopen("currentIndexR.tmp", "w");
+        FILE* tmpFp = fopen("currentIndex.tmp", "w");
         if (tmpFp) {
             fprintf(tmpFp, "%d\n", gCurrentIndex);
             fclose(tmpFp);
