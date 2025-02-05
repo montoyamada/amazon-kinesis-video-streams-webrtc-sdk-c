@@ -82,6 +82,11 @@ add_executable(save_to_ring_buffer save_to_ring_buffer.c)
 # Opus ライブラリをリンク
 target_link_libraries(save_to_ring_buffer PRIVATE opus)
 
+# 実行ファイルの生成
+add_executable(read_from_ring_buffer read_from_ring_buffer.c)
+# Opus ライブラリをリンク
+target_link_libraries(read_from_ring_buffer PRIVATE opus)
+
 add_executable(
   kvsWebrtcClientViewer
   Common.c
