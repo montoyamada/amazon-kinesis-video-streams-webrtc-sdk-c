@@ -56,7 +56,7 @@ VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
         if (tmpFp) {
             fprintf(tmpFp, "%d\n", gCurrentIndex);
             fclose(tmpFp);
-            rename("currentIndexR.tmp", "currentIndexR.txt");
+            rename("currentIndex.tmp", "currentIndex.txt");
         }
     }
 
