@@ -15,9 +15,9 @@
 int get_current_index()
 {
     int fileIndex = 0;
-    FILE* fp = fopen("currentIndex.txt", "r");
+    FILE* fp = fopen("currentIndex.tmp", "r");
     if (!fp) {
-        fprintf(stderr, "ファイルオープン失敗: %s\n", "currentIndex.txt");
+        fprintf(stderr, "ファイルオープン失敗: %s\n", "currentIndex.tmp");
         return 0;
     }
     fscanf(fp, "%d", &fileIndex);
