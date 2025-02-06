@@ -56,7 +56,12 @@ VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
         if (tmpFp) {
             fprintf(tmpFp, "%d\n", gCurrentIndex);
             fclose(tmpFp);
-            rename("currentIndex.tmp", "currentIndex.txt");
+            //rename("currentIndex.tmp", "currentIndex.txt");
+            if (rename("currentIndex.tmp", "currentIndex.txt") != 0) {
+                perror("rename failed");
+            }
+        } else {
+            perror("fopen failed: currentIndex.tmp");
         }
     }
 
