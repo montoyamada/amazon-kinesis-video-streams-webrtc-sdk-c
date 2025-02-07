@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
             continue;
         }
         // 書き込み
-        fprintf(tmpFp, "%d\n", currentIndex);
+        fprintf(tmpFp, "%d", currentIndex);
         fclose(tmpFp);
         // 正常終了後にリネーム
         rename("currentIndex.tmp", "currentIndex.txt");
