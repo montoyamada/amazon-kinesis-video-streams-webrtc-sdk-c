@@ -1,14 +1,14 @@
 /*****************************************************************************
- * read_from_ring_buffer.c (標準出力対応版) [改造版]
- *
+ * read_from_ring_buffer.c (標準出力対応版)
+ * 
  * 使い方例:
  *   1) 出力をファイルに書き込む場合
- *      ./read_from_ring_buffer 610 20000 decoded_output.pcm
+ *      ./read_from_ring_buffer 610 decoded_output.pcm
  *
  *   2) 出力を標準出力に書き込む場合
- *      ./read_from_ring_buffer 610 20000 -
+ *      ./read_from_ring_buffer 610 -
  *      (例: パイプで ffmpeg に送る)
- *      ./read_from_ring_buffer 610 20000 - | ffmpeg -f s16le -ar 8000 -ac 2 -i pipe:0 ...
+ *      ./read_from_ring_buffer 610 - | ffmpeg -f s16le -ar 8000 -ac 2 -i pipe:0 ...
  *****************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,10 +41,9 @@ static int get_current_index(void)
 
 int main(int argc, char* argv[])
 {
-    if (argc < 4) {
-        fprintf(stderr, "Usage: %s <ringSize> <i_usleep> <output.pcm | - (for stdout)>\n", argv[0]);
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s <ringSize> <output.pcm | - (for stdout)>\n", argv[0]);
         fprintf(stderr, "  ringSize: サイクリックバッファの最大数 (例: 610)\n");
-        fprintf(stderr, "  i_usleep: usleep に指定する待ち時間 (マイクロ秒)\n");
         fprintf(stderr, "  output.pcm or '-' for stdout\n");
         return 1;
     }
@@ -56,15 +55,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // usleep 待ち時間 (μs)
-    int i_usleep = atoi(argv[2]);
-    if (i_usleep <= 0) {
-        fprintf(stderr, "Invalid i_usleep: %d\n", i_usleep);
-        return 1;
-    }
-
     // 出力先 (ファイル名 or "-" でstdout)
-    const char* outPcmFile = argv[3];
+    const char* outPcmFile = argv[2];
 
     // ------------------------------
     // 1) Opusデコーダの初期化
@@ -103,12 +95,11 @@ int main(int argc, char* argv[])
     int fileIndex = (fileIndex_here >= 0) ? fileIndex_here : 0;
     int i_fileIndex_here_continuous_cnt = 0;
 
-    fprintf(stderr, "decode_from_ring_buffer: ringSize=%d, i_usleep=%d, output=%s\n",
-            ringSize, i_usleep, useStdout ? "stdout" : outPcmFile);
+    fprintf(stderr, "decode_from_ring_buffer: ringSize=%d, output=%s\n",
+            ringSize, useStdout ? "stdout" : outPcmFile);
 
     while (1) {
-        // 指定されたマイクロ秒だけ待機
-        usleep(i_usleep);
+        usleep(20000); // 20msごとに1フレームと仮定
 
         // fileIndex_hereが10回連続して同じ値だったらループを抜ける
         fileIndex_here = get_current_index();
