@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
         // 指定されたマイクロ秒だけ待機
         usleep(i_usleep);
 
-        // fileIndex_hereが10回連続して同じ値だったらループを抜ける
+        // fileIndex_hereが1000回連続して同じ値だったらループを抜ける
         fileIndex_here = get_current_index();
         fprintf(stderr, "[Debug] fileIndex_here = %d, i_fileIndex_here_continuous_cnt = %d\n",
                 fileIndex_here, i_fileIndex_here_continuous_cnt);
@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
         } else {
             i_fileIndex_here_continuous_cnt = 0;
         }
-        if (i_fileIndex_here_continuous_cnt >= 10) {
+        if (i_fileIndex_here_continuous_cnt >= 1000) {
             fprintf(stderr, "[Info] fileIndex_here is continuous for 10 times, break loop.\n");
             break;
         }
