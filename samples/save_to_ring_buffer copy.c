@@ -4,7 +4,27 @@
 #include <string.h>
 #include <opus/opus.h>
 #include <unistd.h>
-
+/*
+ * 48kHzステレオ, 20msフレーム = 960サンプル/チャネル
+ * 1サンプル = 16bit(2byte)
+ * 2チャンネルなので 960*2=1920 サンプル, バイト数=3840
+ * 	•	SAMPLE_RATE (48000)
+　　　　　　1秒間に48,000サンプルを取得する設定です。
+	•	CHANNELS (2)
+　　　　　　ステレオ音声であるため、2チャネルを使用します。
+	•	FRAME_SIZE (960)
+　　　　　　20ms分のサンプル数を指します。たとえば48kHzの場合、1秒は48,000サンプルなので、1msあたり48サンプルとなり、20msでは 48 × 20 = 960 サンプルとなります。
+	•	BYTES_PER_SAMPLE (2)
+　　　　　　1サンプルは16ビット（= 2バイト）です。
+	•	PCM_FRAME_BYTES
+　　　　　　1フレームの総バイト数を計算しています。
+　　　　　　具体的には、サンプル数（FRAME_SIZE）× チャネル数（CHANNELS）× サンプルあたりバイト数（BYTES_PER_SAMPLE） という式で求めています。
+ */
+//#define SAMPLE_RATE   48000
+//#define CHANNELS      2
+//#define FRAME_SIZE    960  // 20ms worth of samples at 48/6 kHz
+//#define BYTES_PER_SAMPLE 2        // 16bit = 2 bytes
+//#define PCM_FRAME_BYTES (FRAME_SIZE * CHANNELS * BYTES_PER_SAMPLE)
 /*
  * 8kHzステレオ, 20msフレーム 
  なぜ FRAME_SIZE が160になるのか
@@ -50,7 +70,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // ビットレート等を設定（必要に応じて調整）
+    // ビットレート等を設定（必要に応じて調整してください）
     opus_encoder_ctl(encoder, OPUS_SET_BITRATE(64000)); // 64kbps
     // VBR, CBR などの設定も可能 (例: opus_encoder_ctl(encoder, OPUS_SET_VBR(0)); でCBR化)
 
@@ -63,6 +83,7 @@ int main(int argc, char* argv[])
     int currentIndex = 0;  // NNN
     while (1) {
         //i_usleep(usec)ごとにPCMを読み込み、Opusエンコードしてファイルに書き込む
+        //cat *.wav | this_programの場合のパイプライン速度調整
         usleep(i_usleep); // u_sleep usec秒待つ
         // -- 20ms (3840バイト) のPCMを読み込む --
         size_t bytesRead = 0;
@@ -115,6 +136,15 @@ int main(int argc, char* argv[])
         fclose(tmpFp);
         // 正常終了後にリネーム
         rename("currentIndex.tmp", "currentIndex.txt");
+
+        //------
+        //FILE* fp2 = fopen("currentIndex.txt", "w");
+        //if (!fp2) {
+        //    fprintf(stderr, "ファイルオープン失敗: %s\n", "currentIndex.txt");
+        //    continue;
+        //}   
+        //fprintf(fp2, "%d\n", currentIndex);
+        //fclose(fp2);
 
         // -- NNN を更新 (サイクリックバッファ) --
         currentIndex = (currentIndex + 1) % ringSize;

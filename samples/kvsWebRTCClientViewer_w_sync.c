@@ -1,11 +1,7 @@
 #include "Samples.h"
 
 extern PSampleConfiguration gSampleConfiguration;
-// (例) Common.c の先頭にグローバル変数/マクロを追加
-// サイクリックバッファの最大数（リングバッファのサイズ）
 
-// - 必要に応じて可変にしたい場合は、プログラム起動時の引数や環境変数などで設定する
-//#define RING_SIZE 100
 // 連番ファイル名のゼロパディング桁数
 #define ZERO_PADDING 3
 
@@ -23,9 +19,7 @@ VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
 {
     UNUSED_PARAM(customData);
 
-    // 受信したフレームがすでに「Opus」なのか「PCM」なのかを把握しておく必要があります。
     // ここでは「Opusフレームが飛んでくる」という想定で、そのままファイルに書き込みます。
-    // もし生PCMなら、libopus等でエンコードしてから書き込んでください。
 
     // ファイル名を組み立て
     // 例: "opusSampleFrames/sample-003.opus"
@@ -49,9 +43,9 @@ VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
     printf("Saved frame to %s (Size = %u bytes, TrackId = %" PRIu64 ")\n",
            filePath, pFrame->size, pFrame->trackId);
 
-    // currentIndex.txt に現在のインデックスを書き込む (原則オプション。必要な場合のみ)
+    // currentIndex.txt に現在のインデックスを書き込む 
     {
-        // 一時ファイルに書いてから rename でアトミックに置き換える方法
+        // 一時ファイルに書いてから rename でアトミックに置き換える
         FILE* tmpFp = fopen("currentIndex.tmp", "w");
         if (tmpFp) {
             fprintf(tmpFp, "%d\n", gCurrentIndex);
