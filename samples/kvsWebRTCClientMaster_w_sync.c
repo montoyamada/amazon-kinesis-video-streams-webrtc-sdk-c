@@ -85,8 +85,9 @@ INT32 main(INT32 argc, CHAR* argv[])
         CHK_STATUS(readFrameFromDisk(NULL, &frameSize, "./h264SampleFrames/frame-0001.h264"));
         DLOGI("[KVS Master] Checked H264 sample video frame availability....available");
     } else if (videoCodec == RTC_CODEC_H265) {
-        CHK_STATUS(readFrameFromDisk(NULL, &frameSize, "./h265SampleFrames/frame-0001.h265"));
-        DLOGI("[KVS Master] Checked H265 sample video frame availability....available");
+        // Donot use H265 sample frames for now
+        //CHK_STATUS(readFrameFromDisk(NULL, &frameSize, "./h265SampleFrames/frame-0001.h265"));
+        //DLOGI("[KVS Master] Checked H265 sample video frame availability....available");
     }
 
     if (audioCodec == RTC_CODEC_OPUS) {
@@ -193,7 +194,7 @@ PVOID sendVideoPackets(PVOID args)
         if (pSampleConfiguration->videoCodec == RTC_CODEC_H264_PROFILE_42E01F_LEVEL_ASYMMETRY_ALLOWED_PACKETIZATION_MODE) {
             SNPRINTF(filePath, MAX_PATH_LEN, "./h264SampleFrames/frame-%04d.h264", fileIndex);
         } else if (pSampleConfiguration->videoCodec == RTC_CODEC_H265) {
-            SNPRINTF(filePath, MAX_PATH_LEN, "./h265SampleFrames/frame-%04d.h265", fileIndex);
+            //SNPRINTF(filePath, MAX_PATH_LEN, "./h265SampleFrames/frame-%04d.h265", fileIndex);
         }
 
         CHK_STATUS(readFrameFromDisk(NULL, &frameSize, filePath));
