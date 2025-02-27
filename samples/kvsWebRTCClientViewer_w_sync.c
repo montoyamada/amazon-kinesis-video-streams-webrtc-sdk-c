@@ -40,8 +40,8 @@ VOID sampleAudioFrameHandler2(UINT64 customData, PFrame pFrame)
 
     // ログ出力 (デバッグ用)
     // PRIu64 を使って 64bit の trackId を安全に表示
-    printf("Saved frame to %s (Size = %u bytes, TrackId = %" PRIu64 ")\n",
-           filePath, pFrame->size, pFrame->trackId);
+    //("Saved frame to %s (Size = %u bytes, TrackId = %" PRIu64 ")\n",
+    //       filePath, pFrame->size, pFrame->trackId);
 
     // currentIndex.txt に現在のインデックスを書き込む 
     {

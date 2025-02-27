@@ -112,8 +112,8 @@ int main(int argc, char* argv[])
 
         // fileIndex_hereが1000回連続して同じ値だったらループを抜ける
         fileIndex_here = get_current_index();
-        fprintf(stderr, "[Debug] fileIndex_here = %d, i_fileIndex_here_continuous_cnt = %d\n",
-                fileIndex_here, i_fileIndex_here_continuous_cnt);
+        //fprintf(stderr, "[Debug] fileIndex_here = %d, i_fileIndex_here_continuous_cnt = %d\n",
+        //        fileIndex_here, i_fileIndex_here_continuous_cnt);
 
         if (fileIndex_here == fileIndex_here_last) {
             i_fileIndex_here_continuous_cnt++;

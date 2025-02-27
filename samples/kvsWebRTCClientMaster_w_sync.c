@@ -17,8 +17,8 @@ INT32 main(INT32 argc, CHAR* argv[])
     SET_INSTRUMENTED_ALLOCATORS();
     UINT32 logLevel = setLogLevel();
 
-    //DLOGI("[KVS Master] Starting KVS Master by pipe_sender--------");   
-    //return 0;
+    DLOGI("[KVS Master] Starting KVS Master by pipe_sender--------");   
+    return 0;
 
 #ifndef _WIN32
     signal(SIGINT, sigintHandler);
@@ -43,7 +43,7 @@ INT32 main(INT32 argc, CHAR* argv[])
         if (!STRCMP(argv[4], VIDEO_CODEC_NAME_H265)) {
             videoCodec = RTC_CODEC_H265;
         } else {
-            //DLOGI("[KVS Master] Defaulting to H264 as the specified codec's sample frames may not be available");
+            DLOGI("[KVS Master] Defaulting to H264 as the specified codec's sample frames may not be available");
         }
     }
 
@@ -77,37 +77,37 @@ INT32 main(INT32 argc, CHAR* argv[])
     pSampleConfiguration->onDataChannel = onDataChannel;
 #endif
     pSampleConfiguration->mediaType = SAMPLE_STREAMING_AUDIO_VIDEO;
-    //DLOGI("[KVS Master] Finished setting handlers");
+    DLOGI("[KVS Master] Finished setting handlers");
 
     // Check if the samples are present
 
     if (videoCodec == RTC_CODEC_H264_PROFILE_42E01F_LEVEL_ASYMMETRY_ALLOWED_PACKETIZATION_MODE) {
-        //CHK_STATUS(readFrameFromDisk(NULL, &frameSize, "./h264SampleFrames/frame-0001.h264"));
-        //DLOGI("[KVS Master] Checked H264 sample video frame availability....available");
+        CHK_STATUS(readFrameFromDisk(NULL, &frameSize, "./h264SampleFrames/frame-0001.h264"));
+        DLOGI("[KVS Master] Checked H264 sample video frame availability....available");
     } else if (videoCodec == RTC_CODEC_H265) {
-        //CHK_STATUS(readFrameFromDisk(NULL, &frameSize, "./h265SampleFrames/frame-0001.h265"));
-        //DLOGI("[KVS Master] Checked H265 sample video frame availability....available");
+        CHK_STATUS(readFrameFromDisk(NULL, &frameSize, "./h265SampleFrames/frame-0001.h265"));
+        DLOGI("[KVS Master] Checked H265 sample video frame availability....available");
     }
 
     if (audioCodec == RTC_CODEC_OPUS) {
         CHK_STATUS(readFrameFromDisk(NULL, &frameSize, "./opusSampleFrames/sample-001.opus"));
-        //DLOGI("[KVS Master] Checked Opus sample audio frame availability....available");
+        DLOGI("[KVS Master] Checked Opus sample audio frame availability....available");
     }
 
     // Initialize KVS WebRTC. This must be done before anything else, and must only be done once.
     CHK_STATUS(initKvsWebRtc());
-    //DLOGI("[KVS Master] KVS WebRTC initialization completed successfully");
+    DLOGI("[KVS Master] KVS WebRTC initialization completed successfully");
 
     PROFILE_CALL_WITH_START_END_T_OBJ(
         retStatus = initSignaling(pSampleConfiguration, SAMPLE_MASTER_CLIENT_ID), pSampleConfiguration->signalingClientMetrics.signalingStartTime,
         pSampleConfiguration->signalingClientMetrics.signalingEndTime, pSampleConfiguration->signalingClientMetrics.signalingCallTime,
         "Initialize signaling client and connect to the signaling channel");
 
-    //DLOGI("[KVS Master] Channel %s set up done ", pChannelName);
+    DLOGI("[KVS Master] Channel %s set up done ", pChannelName);
 
     // Checking for termination
     CHK_STATUS(sessionCleanupWait(pSampleConfiguration));
-    //DLOGI("[KVS Master] Streaming session terminated");
+    DLOGI("[KVS Master] Streaming session terminated");
 
 CleanUp:
 
@@ -115,7 +115,7 @@ CleanUp:
         DLOGE("[KVS Master] Terminated with status code 0x%08x", retStatus);
     }
 
-    //DLOGI("[KVS Master] Cleaning up....");
+    DLOGI("[KVS Master] Cleaning up....");
     if (pSampleConfiguration != NULL) {
         // Kick of the termination sequence
         ATOMIC_STORE_BOOL(&pSampleConfiguration->appTerminateFlag, TRUE);
@@ -140,7 +140,7 @@ CleanUp:
             DLOGE("[KVS Master] freeSampleConfiguration(): operation returned status code: 0x%08x", retStatus);
         }
     }
-    //DLOGI("[KVS Master] Cleanup done");
+    DLOGI("[KVS Master] Cleanup done");
     CHK_LOG_ERR(retStatus);
 
     RESET_INSTRUMENTED_ALLOCATORS();
