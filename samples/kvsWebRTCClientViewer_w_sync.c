@@ -6,7 +6,7 @@ extern PSampleConfiguration gSampleConfiguration;
 #define ZERO_PADDING 3
 
 // サイクリックバッファの最大数
-static int gRingSize = 100;  
+static int gRingSize = NUMBER_OF_OPUS_FRAME_FILES;//100;
 
 // 現在のファイルインデックス
 static int gCurrentIndex = 0;
