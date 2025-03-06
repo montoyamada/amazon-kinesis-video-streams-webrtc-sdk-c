@@ -242,7 +242,7 @@ void* playbackThread(void* arg) {
 
 // SIGINT (Ctrl + C) で呼ばれるハンドラ (元サンプルが用意している想定)
 #ifndef _WIN32
-static void sigintHandler(int signum)
+void sigintHandler(int signum)
 {
     UNUSED_PARAM(signum);
     ATOMIC_STORE_BOOL(&gSampleConfiguration->interrupted, TRUE);
