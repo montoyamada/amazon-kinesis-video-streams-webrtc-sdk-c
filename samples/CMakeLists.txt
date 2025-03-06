@@ -78,14 +78,14 @@ add_executable(
 target_link_libraries(kvsWebrtcClientMaster_w_sync kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
 
 # 実行ファイルの生成
-add_executable(save_to_ring_buffer save_to_ring_buffer.c)
+#add_executable(save_to_ring_buffer save_to_ring_buffer.c)
 # Opus ライブラリをリンク
-target_link_libraries(save_to_ring_buffer PRIVATE opus)
+#target_link_libraries(save_to_ring_buffer PRIVATE opus)
 
 # 実行ファイルの生成
-add_executable(read_from_ring_buffer read_from_ring_buffer.c)
+#add_executable(read_from_ring_buffer read_from_ring_buffer.c)
 # Opus ライブラリをリンク
-target_link_libraries(read_from_ring_buffer PRIVATE opus)
+#target_link_libraries(read_from_ring_buffer PRIVATE opus)
 
 add_executable(
   kvsWebrtcClientViewer
@@ -97,7 +97,7 @@ add_executable(
   kvsWebrtcAudioClientViewer
   Common.c
   kvsWebRTCClientAudioViewer.c)
-target_link_libraries(kvsWeRTCClientAudioViewer kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
+target_link_libraries(kvsWertcClientAudioViewer kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
 
 
 add_executable(
