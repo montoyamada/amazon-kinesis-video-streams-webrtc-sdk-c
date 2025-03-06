@@ -94,10 +94,10 @@ add_executable(
 target_link_libraries(kvsWebrtcClientViewer kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
 
 add_executable(
-  kvsWebrtcClientViewer_w_sync
+  kvsWebrtcAudioClientViewer
   Common.c
-  kvsWebRTCClientViewer_w_sync.c)
-target_link_libraries(kvsWebrtcClientViewer_w_sync kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
+  kvsWebRTCClientAudioViewer.c)
+target_link_libraries(kvsWeRTCClientAudioViewer kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
 
 
 add_executable(
@@ -131,7 +131,7 @@ if(GST_FOUND)
   )
 endif()
 
-install(TARGETS kvsWebrtcClientMaster kvsWebrtcClientMaster_w_sync save_to_ring_buffer read_from_ring_buffer kvsWebrtcClientViewer kvsWebrtcClientViewer_w_sync discoverNatBehavior
+install(TARGETS kvsWebrtcClientMaster kvsWebrtcClientMaster_w_sync kvsWebrtcClientViewer kvsWebrtcClientAudioViewer discoverNatBehavior
   RUNTIME DESTINATION bin
 )
 
