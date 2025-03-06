@@ -97,7 +97,7 @@ add_executable(
   kvsWebrtcClientAudioViewer
   Common.c
   kvsWebRTCClientAudioViewer.c)
-target_link_libraries(kvsWertcClientAudioViewer kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
+target_link_libraries(kvsWebrtcClientAudioViewer kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
 
 
 add_executable(
