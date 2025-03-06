@@ -99,7 +99,7 @@ add_executable(kvsWebrtcClientAudioViewer
   Common.c
   kvsWebRTCClientAudioViewer.c)
 target_link_libraries(kvsWebrtcClientAudioViewer
-  kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets)
+  kvsWebrtcClient kvsWebrtcSignalingClient ${EXTRA_DEPS} kvsCommonLws kvspicUtils websockets opus)
 
 add_executable(discoverNatBehavior
   discoverNatBehavior.c)
@@ -135,4 +135,3 @@ install(TARGETS
   kvsWebrtcClientAudioViewer
   discoverNatBehavior
   RUNTIME DESTINATION bin)
-  

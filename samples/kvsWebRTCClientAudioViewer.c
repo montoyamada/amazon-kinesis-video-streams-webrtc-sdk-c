@@ -242,7 +242,7 @@ void* playbackThread(void* arg) {
 
 // SIGINT (Ctrl + C) で呼ばれるハンドラ (元サンプルが用意している想定)
 #ifndef _WIN32
-void sigintHandler(int signum)
+void sigintHandler_here(int signum)
 {
     UNUSED_PARAM(signum);
     ATOMIC_STORE_BOOL(&gSampleConfiguration->interrupted, TRUE);
@@ -269,7 +269,7 @@ INT32 main(INT32 argc, CHAR* argv[])
     UINT32 logLevel = setLogLevel();
 
 #ifndef _WIN32
-    signal(SIGINT, sigintHandler);
+    signal(SIGINT, sigintHandler_here);
 #endif
 
 #ifdef IOT_CORE_ENABLE_CREDENTIALS
