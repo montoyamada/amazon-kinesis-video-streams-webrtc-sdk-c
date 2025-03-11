@@ -517,7 +517,7 @@ INT32 main(INT32 argc, CHAR* argv[])
     initAdaptiveJitterBuffer(&g_jitterBuffer, 
                              100, // initialDelayMs
                              20,  // minDelayMs
-                             500  // maxDelayMs
+                             800  // maxDelayMs
     );
     if (pthread_create(&g_jitterThread, NULL, jitterBufferThreadFn, NULL) != 0) {
         DLOGE("Failed to create jitterBuffer thread");
