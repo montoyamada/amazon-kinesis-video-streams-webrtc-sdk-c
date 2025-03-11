@@ -19,6 +19,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 #include <opus/opus.h>
 
 // PCM再生用パラメータ定義
