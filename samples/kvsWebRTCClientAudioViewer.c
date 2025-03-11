@@ -19,7 +19,6 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
-#include <time.h>
 #include <opus/opus.h>
 
 // PCM再生用パラメータ定義
@@ -29,7 +28,7 @@
 #define FRAME_DURATION_MS   20
 #define SAMPLES_PER_FRAME   ((SAMPLE_RATE * FRAME_DURATION_MS) / 1000)  // 320 samples
 #define FRAME_SIZE          (SAMPLES_PER_FRAME * BYTES_PER_SAMPLE)      // 640 bytes
-#define PCM_BUFFER_SIZE     (SAMPLE_RATE * BYTES_PER_SAMPLE * 5)        // 5秒分
+#define PCM_BUFFER_SIZE     (SAMPLE_RATE * BYTES_PER_SAMPLE * 5)        // 5秒分（例: 16000*2*5 = 160000 バイト）
 #define MAX_FRAME_SAMPLES   5760  // Opus の最大フレームサイズ(サンプル/チャンネル)
 
 // PCMリングバッファ構造体
@@ -49,6 +48,7 @@ static volatile int g_running = 1;
 extern PSampleConfiguration gSampleConfiguration;
 
 #ifdef ENABLE_DATA_CHANNEL
+// onMessage callback for a message received by the viewer on a data channel
 VOID dataChannelOnMessageCallback(UINT64 customData, PRtcDataChannel pDataChannel, BOOL isBinary, PBYTE pMessage, UINT32 pMessageLen)
 {
     UNUSED_PARAM(customData);
@@ -60,211 +60,20 @@ VOID dataChannelOnMessageCallback(UINT64 customData, PRtcDataChannel pDataChanne
     }
 }
 
+// onOpen callback for the onOpen event of a viewer created data channel
 VOID dataChannelOnOpenCallback(UINT64 customData, PRtcDataChannel pDataChannel)
 {
     STATUS retStatus = STATUS_SUCCESS;
     DLOGI("New DataChannel has been opened %s ", pDataChannel->name);
     dataChannelOnMessage(pDataChannel, customData, dataChannelOnMessageCallback);
     ATOMIC_INCREMENT((PSIZE_T) customData);
+    // Sending first message to the master over the data channel
     retStatus = dataChannelSend(pDataChannel, FALSE, (PBYTE) VIEWER_DATA_CHANNEL_MESSAGE, STRLEN(VIEWER_DATA_CHANNEL_MESSAGE));
     if (retStatus != STATUS_SUCCESS) {
         DLOGI("[KVS Viewer] dataChannelSend(): operation returned status code: 0x%08x ", retStatus);
     }
 }
 #endif // ENABLE_DATA_CHANNEL
-
-// ===== [ADDED] 適応型ジッターバッファ用の構造体とコード追加 start =====
-
-// 受信フレームをジッターバッファに格納する際のラッパー構造体
-typedef struct {
-    Frame frame;
-    UINT64 arrivalTs; // 受信時刻(システム時刻: getEpochTimestampInHundredsOfNanos 等)
-} JitterFrame;
-
-// 適応型ジッターバッファ管理構造体
-#define MAX_JITTER_FRAMES  128  // 簡易的にフレームを保持する数
-typedef struct {
-    JitterFrame frames[MAX_JITTER_FRAMES];
-    UINT32 head;
-    UINT32 tail;
-    UINT32 count;
-
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-
-    // バッファ遅延(ミリ秒)の目標値
-    INT32 targetDelayMs;
-    INT32 minDelayMs;
-    INT32 maxDelayMs;
-
-    // 前フレーム関連(適応制御用)
-    UINT64 prevArrivalTs;
-    UINT64 prevFramePts;  // 前フレームのpresentationTs
-} AdaptiveJitterBuffer;
-
-// ジッターバッファインスタンス
-static AdaptiveJitterBuffer g_jitterBuffer;
-static pthread_t g_jitterThread; // ジッターバッファ管理スレッド
-
-// ジッターバッファ初期化
-void initAdaptiveJitterBuffer(AdaptiveJitterBuffer* jb, INT32 initialDelayMs, INT32 minDelayMs, INT32 maxDelayMs)
-{
-    memset(jb, 0, sizeof(AdaptiveJitterBuffer));
-    jb->targetDelayMs = initialDelayMs;
-    jb->minDelayMs = minDelayMs;
-    jb->maxDelayMs = maxDelayMs;
-    pthread_mutex_init(&jb->mutex, NULL);
-    pthread_cond_init(&jb->cond, NULL);
-}
-
-// ジッターバッファにフレームを押し込む
-void pushJitterFrame(AdaptiveJitterBuffer* jb, const Frame* pFrame, UINT64 arrivalTs)
-{
-    pthread_mutex_lock(&jb->mutex);
-
-    // いっぱいなら古いフレームを破棄 (tail を進める)
-    if (jb->count >= MAX_JITTER_FRAMES) {
-        jb->tail = (jb->tail + 1) % MAX_JITTER_FRAMES;
-        jb->count--;
-    }
-
-    // 末尾に格納
-    UINT32 pos = (jb->head) % MAX_JITTER_FRAMES;
-    jb->frames[pos].frame = *pFrame; // shallow copy (frameDataもコピー元はSDK管理)
-    jb->frames[pos].arrivalTs = arrivalTs;
-    jb->head = (jb->head + 1) % MAX_JITTER_FRAMES;
-    jb->count++;
-
-    // 遅延適応制御(簡易): 前フレームとの到着間隔差から targetDelayMs を微調整
-    if (jb->prevArrivalTs != 0) {
-        // フレーム間PTS差 (単位: 100ns → ms換算)
-        INT64 ptsDiffMs = (pFrame->presentationTs - jb->prevFramePts) / HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
-        // 実際の到着時間差
-        INT64 arrDiffMs = (arrivalTs - jb->prevArrivalTs) / HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
-
-        // 差分(実際 - 理想)を適当なスケールで取り入れる (非常に簡易)
-        INT64 diff = arrDiffMs - ptsDiffMs;
-        jb->targetDelayMs += diff / 10; // 過剰反応を防ぐために割り算
-
-        // クリップ
-        if (jb->targetDelayMs < jb->minDelayMs) {
-            jb->targetDelayMs = jb->minDelayMs;
-        } else if (jb->targetDelayMs > jb->maxDelayMs) {
-            jb->targetDelayMs = jb->maxDelayMs;
-        }
-    }
-    jb->prevArrivalTs = arrivalTs;
-    jb->prevFramePts = pFrame->presentationTs;
-
-    pthread_cond_signal(&jb->cond);
-    pthread_mutex_unlock(&jb->mutex);
-}
-
-// ジッターバッファから「再生時刻が来た」フレームを取得(なければ待機)
-// 戻り値: フレームを取得できたらTRUE, タイムアウト等で取得不可ならFALSE
-BOOL popJitterFrame(AdaptiveJitterBuffer* jb, Frame* pOutFrame)
-{
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec += 1; // 1秒タイムアウト (適宜調整)
-
-    pthread_mutex_lock(&jb->mutex);
-
-    while (jb->count == 0) {
-        if (pthread_cond_timedwait(&jb->cond, &jb->mutex, &ts) == ETIMEDOUT) {
-            pthread_mutex_unlock(&jb->mutex);
-            return FALSE;
-        }
-    }
-
-    // バッファ先頭のフレームをチェック
-    UINT32 pos = jb->tail;
-    JitterFrame jf = jb->frames[pos];
-
-    // 現在時刻
-    UINT64 now = GETTIME(); // KVS提供の100ns単位 API (または自前実装)
-    // フレームの理想再生時刻 = presentationTs + targetDelayMs
-    //   presentationTs (100ns単位) → ms換算して加算 → 100nsに戻す
-    UINT64 idealPlayback = jf.frame.presentationTs +
-        (UINT64) jb->targetDelayMs * HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
-
-    // まだ再生時刻に達していない場合は待機
-    if (now < idealPlayback) {
-        // cond_wait の再待機
-        INT64 diffNs = (idealPlayback - now);
-        // 大きすぎる待機は上限クリップ
-        if (diffNs > 500LL * HUNDREDS_OF_NANOS_IN_A_MILLISECOND) {
-            diffNs = 500LL * HUNDREDS_OF_NANOS_IN_A_MILLISECOND;
-        }
-        struct timespec waitTime;
-        clock_gettime(CLOCK_REALTIME, &waitTime);
-        // 100ns → ns
-        long addSec = diffNs / (10000000LL); // 1s = 1000ms = 10000000 * 100ns
-        long addNsec = (diffNs % 10000000LL) * 100;
-
-        waitTime.tv_sec += addSec;
-        long nsecTmp = waitTime.tv_nsec + addNsec;
-        if (nsecTmp >= 1000000000L) {
-            waitTime.tv_sec += 1;
-            nsecTmp -= 1000000000L;
-        }
-        waitTime.tv_nsec = nsecTmp;
-
-        pthread_cond_timedwait(&jb->cond, &jb->mutex, &waitTime);
-
-        // タイムアウトや新フレーム到着で再度チェック
-        // ここで「すでに再生時刻を過ぎていればすぐ再生」とする
-        now = GETTIME();
-        if (now < idealPlayback) {
-            // まだ早い場合は「もう1度スキップ」などのロジックを入れても良いが、
-            // サンプルではこれ以上待たずに再生する。
-        }
-    }
-
-    // ここでは先頭フレームを返す
-    *pOutFrame = jf.frame;
-    jb->tail = (jb->tail + 1) % MAX_JITTER_FRAMES;
-    jb->count--;
-
-    pthread_mutex_unlock(&jb->mutex);
-    return TRUE;
-}
-
-// Opusデコード(16kHz/mono)する関数 (既存の例より切り出し)
-int decodeOpusFrame(const uint8_t* opusData, size_t opusSize, int16_t* pcmOut, size_t* pcmOutSize);
-
-// ジッターバッファ管理スレッド：
-//   1) popJitterFrame (適切な時刻まで待機)
-//   2) Opusデコード
-//   3) リングバッファにプッシュ
-void* jitterBufferThreadFn(void* arg)
-{
-    (void)arg;
-    FILE* outFile = stdout; // ログ用（必要に応じて）
-
-    while (g_running) {
-        Frame frame;
-        if (!popJitterFrame(&g_jitterBuffer, &frame)) {
-            // タイムアウトや待機解除
-            continue;
-        }
-
-        // 取り出せたフレームをデコード
-        int16_t pcmData[SAMPLES_PER_FRAME];
-        size_t pcmDataSize = 0;
-        if (decodeOpusFrame(frame.frameData, frame.size, pcmData, &pcmDataSize) != 0) {
-            DLOGE("Opus decoding failed");
-            continue;
-        }
-
-        // デコード結果を既存のPCMリングバッファへ格納
-        pushPCMData(&g_pcmBuffer, (uint8_t*)pcmData, pcmDataSize);
-    }
-
-    return NULL;
-}
-
-// ===== [ADDED] 適応型ジッターバッファ用の構造体とコード追加 end =====
 
 // PCMバッファ初期化
 void initPCMBuffer(PCMBuffer* buf) {
@@ -276,10 +85,11 @@ void initPCMBuffer(PCMBuffer* buf) {
     pthread_cond_init(&buf->cond, NULL);
 }
 
-// PCMデータをバッファにプッシュする（余裕がない場合は古いフレームを捨てる）
+// PCMデータをバッファにプッシュする（余裕がない場合は古い FRAME_SIZE 分を破棄）
 void pushPCMData(PCMBuffer* buf, uint8_t* data, size_t len) {
     pthread_mutex_lock(&buf->mutex);
 
+    // 新規データを入れるための空きが無ければ、古いフレームを捨てる
     while (buf->fill_level + len > PCM_BUFFER_SIZE) {
         buf->read_index = (buf->read_index + FRAME_SIZE) % PCM_BUFFER_SIZE;
         if (buf->fill_level >= FRAME_SIZE) {
@@ -304,7 +114,7 @@ void pushPCMData(PCMBuffer* buf, uint8_t* data, size_t len) {
     pthread_mutex_unlock(&buf->mutex);
 }
 
-// バッファからPCMデータをポップする
+// バッファからPCMデータをポップする（不足分は読み出せないので caller で無音補完）
 size_t popPCMData(PCMBuffer* buf, uint8_t* out, size_t len) {
     pthread_mutex_lock(&buf->mutex);
     size_t bytes_available = buf->fill_level;
@@ -327,27 +137,13 @@ size_t popPCMData(PCMBuffer* buf, uint8_t* out, size_t len) {
     return bytes_to_read;
 }
 
-// ===== [CHANGED] 受信コールバック: フレームを直接デコードせずにジッターバッファへ =====
-VOID sampleAudioFrameHandler3(UINT64 customData, PFrame pFrame)
-{
-    UNUSED_PARAM(customData);
-    DLOGV("Audio Frame received. TrackId: %" PRIu64 ", Size: %u, Flags %u",
-          pFrame->trackId, pFrame->size, pFrame->flags);
-
-    // 受信時刻(システム時刻)を取得 (KVSのGETTIME()など100ns単位関数を利用)
-    UINT64 arrivalTs = GETTIME();
-
-    // ここではフレームをジッターバッファへ放り込むだけ
-    pushJitterFrame(&g_jitterBuffer, pFrame, arrivalTs);
-}
-// ===== [END CHANGED] =====
-
-// Opus フレームを 16kHz/mono PCM にデコードする (既存の実装を関数化)
+// Opus フレームを 16kHz/mono PCM にデコードする
 int decodeOpusFrame(const uint8_t* opusData, size_t opusSize, int16_t* pcmOut, size_t* pcmOutSize) {
     static OpusDecoder *decoder = NULL;
     static int decoder_channels = 0;
     int error;
 
+    // 初回呼び出し時に OpusDecoder を生成（ここでは 48000Hz, 2チャンネル を仮定）
     if (!decoder) {
         decoder = opus_decoder_create(48000, 2, &error);
         if (error != OPUS_OK) {
@@ -357,6 +153,8 @@ int decodeOpusFrame(const uint8_t* opusData, size_t opusSize, int16_t* pcmOut, s
         decoder_channels = 2;
     }
 
+    // デコード結果を格納する一時バッファ
+    // (インタリーブされたPCM：チャンネル数分のサンプル×samples_per_channel)
     int16_t decoded[MAX_FRAME_SAMPLES * decoder_channels];
     int samples_per_channel = opus_decode(decoder, opusData, opusSize,
                                           decoded, MAX_FRAME_SAMPLES, 0);
@@ -365,7 +163,7 @@ int decodeOpusFrame(const uint8_t* opusData, size_t opusSize, int16_t* pcmOut, s
         return samples_per_channel;
     }
 
-    // モノラルにダウンミックス
+    // モノラルにダウンミックス（decoder_channels が 1 ならそのまま、2 以上の場合は平均）
     int16_t mono[MAX_FRAME_SAMPLES];
     for (int i = 0; i < samples_per_channel; i++) {
         if (decoder_channels == 1) {
@@ -379,7 +177,8 @@ int decodeOpusFrame(const uint8_t* opusData, size_t opusSize, int16_t* pcmOut, s
         }
     }
 
-    // 48000Hz -> 16000Hz (1/3)
+    // 48000Hz から 16000Hz への変換は、
+    // ダウンサンプリング率 3 で実施（単純に 3 分の 1 のサンプルを抽出）
     int target_samples = samples_per_channel / 3;
     if (target_samples > SAMPLES_PER_FRAME) {
         target_samples = SAMPLES_PER_FRAME;
@@ -392,11 +191,29 @@ int decodeOpusFrame(const uint8_t* opusData, size_t opusSize, int16_t* pcmOut, s
     return 0;
 }
 
+// 音声フレーム受信コールバック
+VOID sampleAudioFrameHandler3(UINT64 customData, PFrame pFrame)
+{
+    UNUSED_PARAM(customData);
+    DLOGV("Audio Frame received. TrackId: %" PRIu64 ", Size: %u, Flags %u",
+          pFrame->trackId, pFrame->size, pFrame->flags);
+
+    int16_t pcmData[SAMPLES_PER_FRAME];
+    size_t pcmDataSize = 0;
+    if (decodeOpusFrame(pFrame->frameData, pFrame->size, pcmData, &pcmDataSize) != 0) {
+        DLOGE("Opus decoding failed for TrackId: %" PRIu64, pFrame->trackId);
+        return;
+    }
+    pushPCMData(&g_pcmBuffer, (uint8_t*)pcmData, pcmDataSize);
+}
+
 // 再生スレッド：バッファから PCM データを取り出し、標準出力へ書き出す
 void* playbackThread(void* arg) {
     (void)arg;
 
+    // aplay を外部パイプで繋ぐ場合はプログラムは標準出力に書くだけ
     FILE* outFile = stdout;
+
     uint8_t frameBuffer[FRAME_SIZE];
     uint8_t silentFrame[FRAME_SIZE];
     memset(silentFrame, 0, FRAME_SIZE);
@@ -404,6 +221,7 @@ void* playbackThread(void* arg) {
     while (g_running) {
         size_t bytesRead = popPCMData(&g_pcmBuffer, frameBuffer, FRAME_SIZE);
         if (bytesRead < FRAME_SIZE) {
+            // 一部だけ読み込めた場合は、その分だけ書いて残りは無音
             if (bytesRead > 0) {
                 fwrite(frameBuffer, 1, bytesRead, outFile);
             }
@@ -417,18 +235,22 @@ void* playbackThread(void* arg) {
         usleep(FRAME_DURATION_MS * 1000);
     }
 
+    // outFile が stdout の場合、ここでは閉じない
+    // (閉じると他のログ出力が止まる可能性あり)
     return NULL;
 }
 
+// SIGINT (Ctrl + C) で呼ばれるハンドラ (元サンプルが用意している想定)
 #ifndef _WIN32
 static void sigintHandler_here(int signum)
 {
     UNUSED_PARAM(signum);
     ATOMIC_STORE_BOOL(&gSampleConfiguration->interrupted, TRUE);
-    g_running = 0;
+    g_running = 0;  // 再生スレッド停止用
 }
 #endif
 
+// メイン関数
 INT32 main(INT32 argc, CHAR* argv[])
 {
     STATUS retStatus = STATUS_SUCCESS;
@@ -484,6 +306,7 @@ INT32 main(INT32 argc, CHAR* argv[])
     pSampleConfiguration->audioCodec = audioCodec;
     pSampleConfiguration->videoCodec = videoCodec;
 
+    // Initialize KVS WebRTC. This must be done before anything else, and must only be done once.
     CHK_STATUS(initKvsWebRtc());
     DLOGI("[KVS Viewer] KVS WebRTC initialization completed successfully");
 
@@ -506,36 +329,22 @@ INT32 main(INT32 argc, CHAR* argv[])
     locked = FALSE;
 
     MEMSET(&offerSessionDescriptionInit, 0x00, SIZEOF(RtcSessionDescriptionInit));
+
     offerSessionDescriptionInit.useTrickleIce = pSampleStreamingSession->remoteCanTrickleIce;
     CHK_STATUS(setLocalDescription(pSampleStreamingSession->pPeerConnection, &offerSessionDescriptionInit));
     DLOGI("[KVS Viewer] Completed setting local description");
 
-    // 【既存】PCM バッファの初期化
+    // 【追加処理】PCM バッファの初期化と再生スレッド起動
     initPCMBuffer(&g_pcmBuffer);
-
-    // ===== [ADDED] ジッターバッファの初期化とスレッド起動 =====
-    initAdaptiveJitterBuffer(&g_jitterBuffer, 
-                             100, // initialDelayMs
-                             20,  // minDelayMs
-                             800  // maxDelayMs
-    );
-    if (pthread_create(&g_jitterThread, NULL, jitterBufferThreadFn, NULL) != 0) {
-        DLOGE("Failed to create jitterBuffer thread");
-        return EXIT_FAILURE;
-    }
-    // ===== [END ADDED] =====
-
-    // 再生スレッド起動
     pthread_t playbackTid;
     if (pthread_create(&playbackTid, NULL, playbackThread, NULL) != 0) {
         DLOGE("Failed to create playback thread");
         return EXIT_FAILURE;
     }
 
-    // 音声フレーム受信時のコールバック登録
+    // 音声・映像フレーム受信時のコールバック登録（音声は更新済み sampleAudioFrameHandler を利用）
     CHK_STATUS(transceiverOnFrame(pSampleStreamingSession->pAudioRtcRtpTransceiver,
                                   (UINT64) pSampleStreamingSession, sampleAudioFrameHandler3));
-    // 映像は従来のハンドラで
     CHK_STATUS(transceiverOnFrame(pSampleStreamingSession->pVideoRtcRtpTransceiver,
                                   (UINT64) pSampleStreamingSession, sampleVideoFrameHandler));
 
@@ -547,8 +356,7 @@ INT32 main(INT32 argc, CHAR* argv[])
         while (!ATOMIC_LOAD_BOOL(&pSampleStreamingSession->candidateGatheringDone)) {
             CHK_WARN(!ATOMIC_LOAD_BOOL(&pSampleStreamingSession->terminateFlag), STATUS_OPERATION_TIMED_OUT,
                      "application terminated and candidate gathering still not done");
-            CVAR_WAIT(pSampleConfiguration->cvar, pSampleConfiguration->sampleConfigurationObjLock,
-                      5 * HUNDREDS_OF_NANOS_IN_A_SECOND);
+            CVAR_WAIT(pSampleConfiguration->cvar, pSampleConfiguration->sampleConfigurationObjLock, 5 * HUNDREDS_OF_NANOS_IN_A_SECOND);
         }
 
         MUTEX_UNLOCK(pSampleConfiguration->sampleConfigurationObjLock);
@@ -585,14 +393,16 @@ INT32 main(INT32 argc, CHAR* argv[])
     PRtcPeerConnection pPeerConnection = pSampleStreamingSession->pPeerConnection;
     SIZE_T datachannelLocalOpenCount = 0;
 
-    // Creating a new datachannel
+    // Creating a new datachannel on the peer connection of the existing sample streaming session
     CHK_STATUS(createDataChannel(pPeerConnection, pChannelName, NULL, &pDataChannel));
     DLOGI("[KVS Viewer] Creating data channel...completed");
 
+    // Setting a callback for when the data channel is open
     CHK_STATUS(dataChannelOnOpen(pDataChannel, (UINT64) &datachannelLocalOpenCount, dataChannelOnOpenCallback));
     DLOGI("[KVS Viewer] Data Channel open now...");
 #endif // ENABLE_DATA_CHANNEL
 
+    // Block until interrupted
     while (!ATOMIC_LOAD_BOOL(&pSampleConfiguration->interrupted) &&
            !ATOMIC_LOAD_BOOL(&pSampleStreamingSession->terminateFlag)) {
         THREAD_SLEEP(HUNDREDS_OF_NANOS_IN_A_SECOND);
@@ -626,10 +436,9 @@ CleanUp:
     }
     DLOGI("[KVS Viewer] Cleanup done");
 
-    // スレッド終了シグナル
+    // 再生スレッド終了のシグナル送信と join
     g_running = 0;
     pthread_join(playbackTid, NULL);
-    pthread_join(g_jitterThread, NULL);
 
     RESET_INSTRUMENTED_ALLOCATORS();
 
