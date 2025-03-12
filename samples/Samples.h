@@ -91,10 +91,15 @@ extern "C" {
 #define MAX_VIDEO_BITRATE_KBPS              2048000 // Unit kilobits/sec. Value could change based on codec.
 #define MIN_AUDIO_BITRATE_BPS               4000    // Unit bits/sec. Value could change based on codec.
 #define MAX_AUDIO_BITRATE_BPS               650000  // Unit bits/sec. Value could change based on codec.
+// もし定義されていなければ追加
+#ifndef SAMPLE_STREAMING_AUDIO_ONLY
+#define SAMPLE_STREAMING_AUDIO_ONLY 100  // 適当な独立値にする
+#endif
 
 typedef enum {
     SAMPLE_STREAMING_VIDEO_ONLY,
     SAMPLE_STREAMING_AUDIO_VIDEO,
+    SAMPLE_STREAMING_AUDIO_ONLY,
 } SampleStreamingMediaType;
 
 typedef enum {
