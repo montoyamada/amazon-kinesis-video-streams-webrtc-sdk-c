@@ -258,10 +258,11 @@ INT32 main(INT32 argc, CHAR* argv[])
 #endif
 
     // 1) KVS用サンプル設定を用意
-    UINT32 logLevel = setLogLevel();  // 簡易: ログレベルをENV等から
+    UINT32 logLevel = setLogLevel();
     CHK_STATUS(createSampleConfiguration(pChannelName, SIGNALING_CHANNEL_ROLE_TYPE_VIEWER,
                                          TRUE, TRUE, logLevel, &pSampleConfig));
-    pSampleConfig->mediaType = SAMPLE_STREAMING_AUDIO_ONLY;
+    // ★★★★★ 「SAMPLE_STREAMING_AUDIO_ONLY」が無い SDK でも OK にするため AUDIO_VIDEO を指定 ★★★★★
+    pSampleConfig->mediaType = SAMPLE_STREAMING_AUDIO_VIDEO;  
     pSampleConfig->audioCodec = audioCodec;
 
     // 2) KVS WebRTC SDK の初期化
@@ -284,7 +285,7 @@ INT32 main(INT32 argc, CHAR* argv[])
     CHK_STATUS(setLocalDescription(pStreamingSession->pPeerConnection, &offerDesc));
     printf("[KVS Viewer] setLocalDescription done.\n");
 
-    // 6) フレーム受信コールバック登録 (音声のみ)
+    // 6) フレーム受信コールバック登録 (音声のみ利用)
     CHK_STATUS(transceiverOnFrame(pStreamingSession->pAudioRtcRtpTransceiver,
                                   (UINT64) pStreamingSession,
                                   sampleAudioFrameHandler3));
