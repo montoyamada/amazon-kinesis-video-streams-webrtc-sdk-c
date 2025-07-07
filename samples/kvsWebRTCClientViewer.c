@@ -67,15 +67,56 @@ CleanUp:
     }
 }
 
+// Get the best available audio device (prefer USB, avoid HDMI)
+PCHAR getBestAudioDevice(BOOL isPlayback)
+{
+    FILE* fp;
+    CHAR buffer[256];
+    CHAR command[512];
+    static CHAR selectedDevice[64];
+    
+    // Default to plughw for automatic format conversion
+    STRCPY(selectedDevice, "plughw:0,0");
+    
+    // Check for USB audio devices first
+    if (isPlayback) {
+        STRCPY(command, "aplay -l | grep -i usb | head -1");
+    } else {
+        STRCPY(command, "arecord -l | grep -i usb | head -1");
+    }
+    
+    fp = popen(command, "r");
+    if (fp != NULL) {
+        if (fgets(buffer, sizeof(buffer), fp) != NULL) {
+            // Parse "card X: device Y:" format
+            PCHAR cardStr = strstr(buffer, "card ");
+            PCHAR deviceStr = strstr(buffer, "device ");
+            if (cardStr != NULL && deviceStr != NULL) {
+                INT32 card = atoi(cardStr + 5);
+                INT32 device = atoi(deviceStr + 7);
+                snprintf(selectedDevice, sizeof(selectedDevice), "plughw:%d,%d", card, device);
+                pclose(fp);
+                DLOGI("[KVS Viewer] Selected USB audio device: %s", selectedDevice);
+                return selectedDevice;
+            }
+        }
+        pclose(fp);
+    }
+    
+    DLOGI("[KVS Viewer] Using analog audio device: %s", selectedDevice);
+    return selectedDevice;
+}
+
 // Initialize ALSA capture device
 STATUS initializeAlsaCapture(snd_pcm_t** ppHandle, UINT32 sampleRate, UINT32 channels, UINT32 periodSize)
 {
     STATUS retStatus = STATUS_SUCCESS;
     INT32 err;
     snd_pcm_hw_params_t* hwParams = NULL;
+    PCHAR deviceName = getBestAudioDevice(FALSE);
     
-    // Open PCM device for capture
-    err = snd_pcm_open(ppHandle, "default", SND_PCM_STREAM_CAPTURE, 0);
+    // Open PCM device for capture - Using best available device
+    err = snd_pcm_open(ppHandle, deviceName, SND_PCM_STREAM_CAPTURE, 0);
     CHK(err >= 0, STATUS_INTERNAL_ERROR);
     
     // Allocate hardware parameters
@@ -135,7 +176,7 @@ PVOID audioCaptureThread(PVOID args)
     STATUS retStatus = STATUS_SUCCESS;
     PSampleStreamingSession pSampleStreamingSession = (PSampleStreamingSession) args;
     Frame frame;
-    UINT32 sampleRate = 48000; // 48 kHz
+    UINT32 sampleRate = 48000; // 48 kHz - Standard WebRTC rate for JS compatibility
     UINT32 channels = 2;
     UINT32 samplesPerFrame = 960; // 20ms of audio at 48kHz
     UINT32 bytesPerSample = 2; // 16-bit samples
@@ -186,7 +227,10 @@ PVOID audioCaptureThread(PVOID args)
             if (pSampleStreamingSession->pAudioRtcRtpTransceiver != NULL) {
                 retStatus = writeFrame(pSampleStreamingSession->pAudioRtcRtpTransceiver, &frame);
                 if (retStatus != STATUS_SUCCESS) {
-                    DLOGW("[KVS Viewer] writeFrame() failed with 0x%08x", retStatus);
+                    // Only log non-SRTP "not ready" errors to reduce noise during initialization
+                    if (retStatus != STATUS_SRTP_NOT_READY_YET) {
+                        DLOGW("[KVS Viewer] writeFrame() failed with 0x%08x", retStatus);
+                    }
                 }
             }
             
@@ -216,9 +260,10 @@ STATUS initializeAlsaPlayback(snd_pcm_t** ppHandle, UINT32 sampleRate, UINT32 ch
     STATUS retStatus = STATUS_SUCCESS;
     INT32 err;
     snd_pcm_hw_params_t* hwParams = NULL;
+    PCHAR deviceName = getBestAudioDevice(TRUE);
     
-    // Open PCM device for playback
-    err = snd_pcm_open(ppHandle, "default", SND_PCM_STREAM_PLAYBACK, 0);
+    // Open PCM device for playback - Using best available device
+    err = snd_pcm_open(ppHandle, deviceName, SND_PCM_STREAM_PLAYBACK, 0);
     CHK(err >= 0, STATUS_INTERNAL_ERROR);
     
     // Allocate hardware parameters
@@ -276,7 +321,7 @@ CleanUp:
 PVOID audioPlaybackThread(PVOID args)
 {
     STATUS retStatus = STATUS_SUCCESS;
-    UINT32 sampleRate = 48000; // 48 kHz
+    UINT32 sampleRate = 48000; // 48 kHz - EKSA device supports this
     UINT32 channels = 2;
     UINT32 samplesPerFrame = 960; // 20ms of audio at 48kHz
     UINT32 bytesPerSample = 2; // 16-bit samples
@@ -576,7 +621,9 @@ INT32 main(INT32 argc, CHAR* argv[])
     CHK_STATUS(signalingClientSendMessageSync(pSampleConfiguration->signalingClientHandle, &message));
     
     // Start audio handling
+    DLOGI("[KVS Viewer] Starting audio handling...");
     CHK_STATUS(startAudioHandling(pSampleStreamingSession));
+    DLOGI("[KVS Viewer] Audio handling started successfully");
     
 #ifdef ENABLE_DATA_CHANNEL
     PRtcDataChannel pDataChannel = NULL;
